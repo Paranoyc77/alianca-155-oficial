@@ -1,7 +1,6 @@
-# Aliança 155 - Correção do Player de Música (YouTube)
+# Aliança 155 - Ocultar Card Visual do YouTube
 
-- [x] Fase 1: Localizar o fluxo atual de configuração e reprodução de música
-- [ ] Fase 2: Implementar conversão de links do YouTube (watch, youtu.be, shorts, embed) para iframe/audio incorporado
-- [ ] Fase 3: Atualizar o painel admin para orientar o usuário sobre links do YouTube
-- [ ] Fase 4: Atualizar a página pública para renderizar o player do YouTube de forma fluida e estilizada
-- [ ] Fase 5: Salvar checkpoint final e entregar a correção
+- [x] Fase 1: Localizar o componente visual do player do YouTube
+- [x] Fase 2: Tornar o iframe do YouTube invisível (`display: none` ou `opacity: 0` com dimensões mínimas) mantendo a reprodução ativa
+- [x] Fase 3: Testar a reprodução e o botão de música na página pública
+- [x] Fase 4: Salvar checkpoint e entregar a alteração

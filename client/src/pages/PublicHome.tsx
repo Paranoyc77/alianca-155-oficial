@@ -154,16 +154,12 @@ export default function PublicHome() {
         <audio ref={audioRef} src={settings.site_music_url} loop preload="none" />
       )}
 
-      {/* Hidden or active YouTube iframe when playing */}
+      {/* YouTube audio iframe hidden from view when playing */}
       {youtubeEmbed && isPlaying && (
-        <div className="fixed bottom-4 right-4 z-50 w-72 h-40 bg-[#111] border border-[#333] rounded-2xl overflow-hidden shadow-2xl flex flex-col">
-          <div className="bg-[#1f1f1f] px-3 py-1.5 flex items-center justify-between text-xs font-bold text-[#bca9ff]">
-            <span>🎵 {settings.site_music_title || "Trilha Sonora"}</span>
-            <button onClick={() => setIsPlaying(false)} className="text-gray-400 hover:text-white">✕</button>
-          </div>
+        <div className="hidden">
           <iframe
             src={youtubeEmbed}
-            className="w-full flex-1"
+            className="w-0 h-0"
             allow="autoplay"
             title="Trilha Sonora YouTube"
           ></iframe>
