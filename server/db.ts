@@ -1,6 +1,6 @@
-import { eq, desc, sql } from "drizzle-orm";
+import { eq, desc, sql, lt } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, divulgacoes, appConfig, recrutamentoInscricoes, equipeContatos, Divulgacao, InsertDivulgacao, RecrutamentoInscricao, InsertRecrutamentoInscricao, EquipeContato, InsertEquipeContato } from "../drizzle/schema";
+import { InsertUser, users, divulgacoes, appConfig, recrutamentoInscricoes, equipeContatos, siteVisitas, usuariosOnline, Divulgacao, InsertDivulgacao, RecrutamentoInscricao, InsertRecrutamentoInscricao, EquipeContato, InsertEquipeContato } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -177,6 +177,56 @@ export async function deleteEquipeContato(id: number): Promise<void> {
   await db.delete(equipeContatos).where(eq(equipeContatos.id, id));
 }
 
+// ==========================================
+// Métricas & Visitas Database Helpers
+// ==========================================
+
+export async function recordVisit(ipHash?: string): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  await db.insert(siteVisitas).values({ ipHash: ipHash || null });
+}
+
+export async function getTotalVisitas(): Promise<number> {
+  const db = await getDb();
+  if (!db) return 0;
+  const res = await db.select({ count: sql<number>`count(*)` }).from(siteVisitas);
+  return Number(res[0]?.count || 0);
+}
+
+export async function heartbeatOnline(sessionId: string): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  
+  // Limpar sessões inativas com mais de 2 minutos (120 segundos)
+  const twoMinutesAgo = new Date(Date.now() - 2 * 60 * 1000);
+  try {
+    await db.delete(usuariosOnline).where(lt(usuariosOnline.lastSeenAt, twoMinutesAgo));
+  } catch (e) {
+    // ignorar erro de limpeza
+  }
+
+  // Upsert sessionId
+  await db.insert(usuariosOnline)
+    .values({ sessionId, lastSeenAt: new Date() })
+    .onDuplicateKeyUpdate({ set: { lastSeenAt: new Date() } });
+}
+
+export async function getOnlineCount(): Promise<number> {
+  const db = await getDb();
+  if (!db) return 1;
+
+  const twoMinutesAgo = new Date(Date.now() - 2 * 60 * 1000);
+  try {
+    // Remover inativos antes de contar
+    await db.delete(usuariosOnline).where(lt(usuariosOnline.lastSeenAt, twoMinutesAgo));
+    const res = await db.select({ count: sql<number>`count(*)` }).from(usuariosOnline);
+    return Number(res[0]?.count || 1);
+  } catch (e) {
+    return 1;
+  }
+}
+
 export async function getConfigValue(key: string, defaultValue: string): Promise<string> {
   const db = await getDb();
   if (!db) return defaultValue;
@@ -239,4 +289,6 @@ export async function clearAllData(): Promise<void> {
   await db.delete(divulgacoes);
   await db.delete(recrutamentoInscricoes);
   await db.delete(equipeContatos);
+  await db.delete(siteVisitas);
+  await db.delete(usuariosOnline);
 }

@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { trpc } from "@/lib/trpc";
-import { LayoutDashboard, Megaphone, Users, Globe, Settings, LogOut, Plus, Search, ExternalLink, Edit, Trash2, Key, AlertTriangle, X, Loader2, Menu, AlertCircle, FileText, CheckCircle2, Image as ImageIcon, Music, UserCheck, ShieldAlert, Phone } from "lucide-react";
+import { LayoutDashboard, Megaphone, Users, Globe, Settings, LogOut, Plus, Search, ExternalLink, Edit, Trash2, Key, AlertTriangle, X, Loader2, Menu, AlertCircle, FileText, CheckCircle2, Image as ImageIcon, Music, UserCheck, ShieldAlert, Phone, Eye, Activity } from "lucide-react";
 import { toast } from "sonner";
 
 export default function AdminPanel({ onLogout }: { onLogout: () => void }) {
@@ -515,6 +515,20 @@ export default function AdminPanel({ onLogout }: { onLogout: () => void }) {
                     <Globe className="w-5 h-5 text-[#f59e0b]" />
                   </div>
                   <div className="text-3xl font-black">{divulgacoes.filter(x => x.type !== "grupo").length}</div>
+                </div>
+                <div className="p-6 rounded-2xl bg-[#111111] border border-[#292929]">
+                  <div className="flex items-center justify-between mb-4">
+                    <span className="text-sm text-[#969696]">Total de Visitas</span>
+                    <Eye className="w-5 h-5 text-[#8b5cf6]" />
+                  </div>
+                  <div className="text-3xl font-black">{stats?.totalVisitas ?? 0}</div>
+                </div>
+                <div className="p-6 rounded-2xl bg-[#111111] border border-[#292929]">
+                  <div className="flex items-center justify-between mb-4">
+                    <span className="text-sm text-[#969696]">Usuários Online Agora</span>
+                    <Activity className="w-5 h-5 text-[#22c55e] animate-pulse" />
+                  </div>
+                  <div className="text-3xl font-black">{stats?.usuariosOnline ?? 1}</div>
                 </div>
               </div>
 

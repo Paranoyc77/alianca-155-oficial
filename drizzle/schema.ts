@@ -62,6 +62,18 @@ export const equipeContatos = mysqlTable("equipe_contatos", {
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 
+export const siteVisitas = mysqlTable("site_visitas", {
+  id: int("id").autoincrement().primaryKey(),
+  ipHash: varchar("ipHash", { length: 64 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export const usuariosOnline = mysqlTable("usuarios_online", {
+  id: int("id").autoincrement().primaryKey(),
+  sessionId: varchar("sessionId", { length: 128 }).notNull().unique(),
+  lastSeenAt: timestamp("lastSeenAt").defaultNow().notNull(),
+});
+
 export type Divulgacao = typeof divulgacoes.$inferSelect;
 export type InsertDivulgacao = typeof divulgacoes.$inferInsert;
 export type AppConfig = typeof appConfig.$inferSelect;

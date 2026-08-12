@@ -58,6 +58,27 @@ export const appRouter = router({
       return await db.getAllEquipeContatos();
     }),
 
+    // Registrar visita e heartbeat online (público)
+    pingVisit: publicProcedure
+      .input(z.object({ sessionId: z.string() }))
+      .mutation(async ({ input, ctx }) => {
+        const ip = ctx.req.headers["x-forwarded-for"] || ctx.req.socket?.remoteAddress || "unknown";
+        await db.recordVisit(String(ip));
+        await db.heartbeatOnline(input.sessionId);
+        const totalVisitas = await db.getTotalVisitas();
+        const usuariosOnline = await db.getOnlineCount();
+        return { success: true, totalVisitas, usuariosOnline };
+      }),
+
+    // Heartbeat online periódico (público)
+    heartbeat: publicProcedure
+      .input(z.object({ sessionId: z.string() }))
+      .mutation(async ({ input }) => {
+        await db.heartbeatOnline(input.sessionId);
+        const usuariosOnline = await db.getOnlineCount();
+        return { success: true, usuariosOnline };
+      }),
+
     // Criar membro da equipe (admin)
     createEquipe: adminProcedure
       .input(z.object({
@@ -148,13 +169,17 @@ export const appRouter = router({
       const all = await db.getAllDivulgacoes();
       const inscricoes = await db.getAllRecrutamentoInscricoes();
       const equipe = await db.getAllEquipeContatos();
+      const totalVisitas = await db.getTotalVisitas();
+      const usuariosOnline = await db.getOnlineCount();
+
       const total = all.length;
       const grupos = all.filter(x => x.type === "grupo").length;
       const canais = all.filter(x => x.type === "canal").length;
       const sites = all.filter(x => x.type === "site").length;
       const totalInscricoes = inscricoes.length;
       const totalEquipe = equipe.length;
-      return { total, grupos, canais, sites, totalInscricoes, totalEquipe };
+
+      return { total, grupos, canais, sites, totalInscricoes, totalEquipe, totalVisitas, usuariosOnline };
     }),
 
     // Verificar se sessão admin é válida

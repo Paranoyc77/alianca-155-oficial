@@ -1,8 +1,8 @@
-# Aliança 155 - Gestão de Donos e Admins
+# Aliança 155 - Métricas de Visitas e Online
 
-- [x] Fase 1: Definir modelo de dados para donos e administradores (`equipe_contatos`)
-- [x] Fase 2: Expandir schema Drizzle e aplicar migração MySQL para `equipe_contatos`
-- [x] Fase 3: Implementar rotas tRPC públicas e protegidas (CRUD de equipe e contatos)
-- [x] Fase 4: Criar aba pública "Donos e Admins" na página inicial com fotos, cargos e botões de contato (WhatsApp / Telegram)
-- [x] Fase 5: Criar aba dedicada no Painel Admin para gerenciar fotos, nomes, cargos e números de contato
-- [x] Fase 6: Executar testes automatizados, validar responsividade e preparar checkpoint final
+- [x] Fase 1: Definir o modelo de métricas e sessões online ativas
+- [x] Fase 2: Expandir o schema Drizzle com tabelas `site_visitas` e `usuarios_online`
+- [x] Fase 3: Implementar endpoints tRPC públicos (registrar visita, heartbeat online) e protegidos (estatísticas de tráfego)
+- [x] Fase 4: Integrar pings automáticos de heartbeat na página pública e cards de métricas no painel admin
+- [x] Fase 5: Testar contagem de visitantes únicos/totais, expiração de usuários inativos e responsividade
+- [x] Fase 6: Salvar checkpoint final e entregar o recurso de métricas em tempo real

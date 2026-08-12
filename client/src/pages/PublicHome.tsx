@@ -1,6 +1,6 @@
-import { useState, useMemo, useRef } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import { trpc } from "@/lib/trpc";
-import { Search, ExternalLink, Users, Megaphone, Globe, Sparkles, Loader2, Lock, UserPlus, Music, Play, Pause, Send, ShieldAlert, Phone, MessageCircle } from "lucide-react";
+import { Search, ExternalLink, Users, Megaphone, Globe, Sparkles, Loader2, Lock, UserPlus, Music, Play, Pause, Send, ShieldAlert, Phone, MessageCircle, Eye, Activity } from "lucide-react";
 import { Link } from "wouter";
 import { toast } from "sonner";
 
@@ -14,6 +14,10 @@ export default function PublicHome() {
   const [experiencia, setExperiencia] = useState("");
   const [motivacao, setMotivacao] = useState("");
 
+  // Metrics state
+  const [totalVisitas, setTotalVisitas] = useState<number | null>(null);
+  const [usuariosOnline, setUsuariosOnline] = useState<number | null>(null);
+
   // Audio player state
   const [isPlaying, setIsPlaying] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -21,6 +25,38 @@ export default function PublicHome() {
   const { data: divulgacoes = [], isLoading: listLoading } = trpc.alianca.list.useQuery();
   const { data: settings = {} } = trpc.alianca.getSettings.useQuery();
   const { data: equipe = [], isLoading: equipeLoading } = trpc.alianca.listEquipe.useQuery();
+
+  const pingMutation = trpc.alianca.pingVisit.useMutation({
+    onSuccess: (data) => {
+      setTotalVisitas(data.totalVisitas);
+      setUsuariosOnline(data.usuariosOnline);
+    }
+  });
+
+  const heartbeatMutation = trpc.alianca.heartbeat.useMutation({
+    onSuccess: (data) => {
+      setUsuariosOnline(data.usuariosOnline);
+    }
+  });
+
+  useEffect(() => {
+    // Gerar sessionId único por aba/sessão
+    let sessionId = sessionStorage.getItem("alianca_session_id");
+    if (!sessionId) {
+      sessionId = Math.random().toString(36).substring(2) + Date.now().toString(36);
+      sessionStorage.setItem("alianca_session_id", sessionId);
+    }
+
+    // Ping inicial de visita
+    pingMutation.mutate({ sessionId });
+
+    // Heartbeat a cada 30 segundos
+    const interval = setInterval(() => {
+      heartbeatMutation.mutate({ sessionId });
+    }, 30000);
+
+    return () => clearInterval(interval);
+  }, []);
 
   const submitRecrutamentoMutation = trpc.alianca.submitRecrutamento.useMutation({
     onSuccess: () => {
@@ -107,6 +143,19 @@ export default function PublicHome() {
         </div>
 
         <div className="flex items-center gap-3">
+          {/* Metrics badges */}
+          <div className="hidden md:flex items-center gap-3 bg-[#111111] border border-[#222] px-3.5 py-1.5 rounded-xl text-xs">
+            <div className="flex items-center gap-1.5 text-[#969696]">
+              <Eye className="w-3.5 h-3.5 text-[#8b5cf6]" />
+              <span>Visitas: <strong className="text-white">{totalVisitas !== null ? totalVisitas : "..."}</strong></span>
+            </div>
+            <div className="w-[1px] h-3.5 bg-[#333]"></div>
+            <div className="flex items-center gap-1.5 text-[#969696]">
+              <Activity className="w-3.5 h-3.5 text-[#22c55e] animate-pulse" />
+              <span>Online: <strong className="text-white">{usuariosOnline !== null ? usuariosOnline : "1"}</strong></span>
+            </div>
+          </div>
+
           {settings.site_music_url && (
             <button
               onClick={toggleMusic}
@@ -143,6 +192,19 @@ export default function PublicHome() {
         <p className="text-[#969696] text-base md:text-lg max-w-2xl mx-auto leading-relaxed">
           {settings.hero_description || "Encontre os melhores grupos, canais e sites recomendados pela nossa comunidade."}
         </p>
+
+        {/* Mobile Metrics view */}
+        <div className="flex md:hidden items-center justify-center gap-4 bg-[#111111] border border-[#222] px-4 py-2 rounded-xl text-xs max-w-xs mx-auto">
+          <div className="flex items-center gap-1.5 text-[#969696]">
+            <Eye className="w-3.5 h-3.5 text-[#8b5cf6]" />
+            <span>Visitas: <strong className="text-white">{totalVisitas !== null ? totalVisitas : "..."}</strong></span>
+          </div>
+          <div className="w-[1px] h-3.5 bg-[#333]"></div>
+          <div className="flex items-center gap-1.5 text-[#969696]">
+            <Activity className="w-3.5 h-3.5 text-[#22c55e] animate-pulse" />
+            <span>Online: <strong className="text-white">{usuariosOnline !== null ? usuariosOnline : "1"}</strong></span>
+          </div>
+        </div>
 
         {/* Search & Filter Bar */}
         {activeTab !== "recrutamento" && activeTab !== "equipe" && (
