@@ -5,6 +5,32 @@ import { publicProcedure, router } from "./_core/trpc";
 import { z } from "zod";
 import * as db from "./db";
 import { TRPCError } from "@trpc/server";
+import jwt from "jsonwebtoken";
+
+const ADMIN_COOKIE = "alianca155_admin_session";
+const JWT_SECRET_KEY = process.env.JWT_SECRET || "alianca155_secret_key";
+
+const adminProcedure = publicProcedure.use(({ ctx, next }) => {
+  const cookies = ctx.req.headers.cookie;
+  if (!cookies) {
+    throw new TRPCError({ code: "UNAUTHORIZED", message: "Acesso não autorizado. Faça login no painel." });
+  }
+
+  // Parse cookies manually or check header
+  const match = cookies.split(";").map(c => c.trim()).find(c => c.startsWith(`${ADMIN_COOKIE}=`));
+  if (!match) {
+    throw new TRPCError({ code: "UNAUTHORIZED", message: "Sessão administrativa ausente ou expirada." });
+  }
+
+  const token = match.split("=")[1];
+  try {
+    jwt.verify(token, JWT_SECRET_KEY);
+  } catch (err) {
+    throw new TRPCError({ code: "UNAUTHORIZED", message: "Sessão inválida." });
+  }
+
+  return next({ ctx });
+});
 
 export const appRouter = router({
   system: systemRouter,
@@ -18,13 +44,13 @@ export const appRouter = router({
   }),
 
   alianca: router({
-    // Listar todas as divulgações
+    // Listar todas as divulgações (público)
     list: publicProcedure.query(async () => {
       return await db.getAllDivulgacoes();
     }),
 
-    // Estatísticas para o dashboard admin
-    stats: publicProcedure.query(async () => {
+    // Estatísticas para o dashboard admin (requer admin)
+    stats: adminProcedure.query(async () => {
       const all = await db.getAllDivulgacoes();
       const total = all.length;
       const grupos = all.filter(x => x.type === "grupo").length;
@@ -33,19 +59,45 @@ export const appRouter = router({
       return { total, grupos, canais, sites };
     }),
 
-    // Login com senha simples
+    // Verificar se sessão admin é válida
+    checkAdmin: publicProcedure.query(({ ctx }) => {
+      const cookies = ctx.req.headers.cookie || "";
+      const match = cookies.split(";").map(c => c.trim()).find(c => c.startsWith(`${ADMIN_COOKIE}=`));
+      if (!match) return { isAdmin: false };
+      const token = match.split("=")[1];
+      try {
+        jwt.verify(token, JWT_SECRET_KEY);
+        return { isAdmin: true };
+      } catch (e) {
+        return { isAdmin: false };
+      }
+    }),
+
+    // Login com senha simples definindo cookie HTTP-only
     login: publicProcedure
       .input(z.object({ password: z.string() }))
-      .mutation(async ({ input }) => {
+      .mutation(async ({ input, ctx }) => {
         const adminPass = await db.getConfigValue("admin_password", "155admin");
         if (input.password === adminPass) {
+          const token = jwt.sign({ role: "admin" }, JWT_SECRET_KEY, { expiresIn: "7d" });
+          const isSecure = ctx.req.protocol === "https";
+          const cookieStr = `${ADMIN_COOKIE}=${token}; Path=/; HttpOnly; SameSite=${isSecure ? "none" : "lax"}; Max-Age=${7 * 24 * 3600}${isSecure ? "; Secure" : ""}`;
+          ctx.res.setHeader("Set-Cookie", cookieStr);
           return { success: true };
         }
         throw new TRPCError({ code: "UNAUTHORIZED", message: "Senha incorreta." });
       }),
 
-    // Alterar senha do admin
-    changePassword: publicProcedure
+    // Logout do admin limpando cookie
+    adminLogout: publicProcedure.mutation(({ ctx }) => {
+      const isSecure = ctx.req.protocol === "https";
+      const cookieStr = `${ADMIN_COOKIE}=; Path=/; HttpOnly; SameSite=${isSecure ? "none" : "lax"}; Max-Age=0${isSecure ? "; Secure" : ""}`;
+      ctx.res.setHeader("Set-Cookie", cookieStr);
+      return { success: true };
+    }),
+
+    // Alterar senha do admin (requer admin)
+    changePassword: adminProcedure
       .input(z.object({ oldPassword: z.string(), newPassword: z.string() }))
       .mutation(async ({ input }) => {
         const adminPass = await db.getConfigValue("admin_password", "155admin");
@@ -59,8 +111,8 @@ export const appRouter = router({
         return { success: true };
       }),
 
-    // Criar divulgação
-    create: publicProcedure
+    // Criar divulgação (requer admin)
+    create: adminProcedure
       .input(z.object({
         title: z.string().min(1, "Título é obrigatório"),
         description: z.string().optional().default(""),
@@ -79,8 +131,8 @@ export const appRouter = router({
         return { success: true, id };
       }),
 
-    // Atualizar divulgação
-    update: publicProcedure
+    // Atualizar divulgação (requer admin)
+    update: adminProcedure
       .input(z.object({
         id: z.number(),
         title: z.string().min(1),
@@ -100,16 +152,16 @@ export const appRouter = router({
         return { success: true };
       }),
 
-    // Excluir divulgação
-    delete: publicProcedure
+    // Excluir divulgação (requer admin)
+    delete: adminProcedure
       .input(z.object({ id: z.number() }))
       .mutation(async ({ input }) => {
         await db.deleteDivulgacao(input.id);
         return { success: true };
       }),
 
-    // Zona de perigo: limpar todos os dados
-    clearAll: publicProcedure.mutation(async () => {
+    // Zona de perigo: limpar todos os dados (requer admin)
+    clearAll: adminProcedure.mutation(async () => {
       await db.clearAllData();
       return { success: true };
     }),

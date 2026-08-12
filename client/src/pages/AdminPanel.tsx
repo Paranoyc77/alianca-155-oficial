@@ -1,12 +1,13 @@
 import { useState, useMemo } from "react";
 import { trpc } from "@/lib/trpc";
-import { LayoutDashboard, Megaphone, Users, Globe, Settings, LogOut, Plus, Search, ExternalLink, Edit, Trash2, Key, AlertTriangle, ShieldAlert, X, Check, Loader2 } from "lucide-react";
+import { LayoutDashboard, Megaphone, Users, Globe, Settings, LogOut, Plus, Search, ExternalLink, Edit, Trash2, Key, AlertTriangle, ShieldAlert, X, Check, Loader2, Menu, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 
 export default function AdminPanel({ onLogout }: { onLogout: () => void }) {
   const [activeSection, setActiveSection] = useState("dashboard");
   const [searchQuery, setSearchQuery] = useState("");
   const [filterType, setFilterType] = useState("all");
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -18,8 +19,17 @@ export default function AdminPanel({ onLogout }: { onLogout: () => void }) {
   const [confirmPassword, setConfirmPassword] = useState("");
 
   const utils = trpc.useUtils();
-  const { data: stats, isLoading: statsLoading } = trpc.alianca.stats.useQuery();
-  const { data: divulgacoes = [], isLoading: listLoading } = trpc.alianca.list.useQuery();
+  const { data: stats, isLoading: statsLoading, error: statsError } = trpc.alianca.stats.useQuery();
+  const { data: divulgacoes = [], isLoading: listLoading, error: listError } = trpc.alianca.list.useQuery();
+
+  const logoutMutation = trpc.alianca.adminLogout.useMutation({
+    onSuccess: () => {
+      onLogout();
+    },
+    onError: () => {
+      onLogout();
+    }
+  });
 
   const createMutation = trpc.alianca.create.useMutation({
     onSuccess: () => {
@@ -162,109 +172,143 @@ export default function AdminPanel({ onLogout }: { onLogout: () => void }) {
     config: "Configurações"
   };
 
+  const SidebarContent = () => (
+    <div className="flex flex-col h-full bg-[#0d0d0d] border-r border-[#292929]">
+      <div className="p-6 flex items-center gap-3 border-b border-[#292929]">
+        <div className="w-[42px] h-[42px] rounded-[12px] bg-gradient-to-br from-[#8b5cf6] to-[#5b21b6] flex items-center justify-center font-black text-white">
+          155
+        </div>
+        <div>
+          <strong className="block text-[15px]">Aliança 155</strong>
+          <small className="text-[#969696] text-[11px]">Painel Admin</small>
+        </div>
+      </div>
+
+      <div className="px-4 py-3 text-[#555] text-[11px] font-bold tracking-wider">PRINCIPAL</div>
+      <nav className="flex-1 px-3 space-y-1">
+        <button
+          onClick={() => { setActiveSection("dashboard"); setMobileMenuOpen(false); }}
+          className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-sm transition ${activeSection === "dashboard" ? "bg-[#8b5cf6] text-white" : "text-[#969696] hover:text-white hover:bg-[#171717]"}`}
+        >
+          <LayoutDashboard className="w-4 h-4" /> Dashboard
+        </button>
+        <button
+          onClick={() => { setActiveSection("divulgacoes"); setMobileMenuOpen(false); }}
+          className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-sm transition ${activeSection === "divulgacoes" ? "bg-[#8b5cf6] text-white" : "text-[#969696] hover:text-white hover:bg-[#171717]"}`}
+        >
+          <Megaphone className="w-4 h-4" /> Divulgações
+        </button>
+        <button
+          onClick={() => { setActiveSection("grupos"); setMobileMenuOpen(false); }}
+          className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-sm transition ${activeSection === "grupos" ? "bg-[#8b5cf6] text-white" : "text-[#969696] hover:text-white hover:bg-[#171717]"}`}
+        >
+          <Users className="w-4 h-4" /> Grupos
+        </button>
+        <button
+          onClick={() => { setActiveSection("canais"); setMobileMenuOpen(false); }}
+          className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-sm transition ${activeSection === "canais" ? "bg-[#8b5cf6] text-white" : "text-[#969696] hover:text-white hover:bg-[#171717]"}`}
+        >
+          <Megaphone className="w-4 h-4" /> Canais
+        </button>
+        <button
+          onClick={() => { setActiveSection("sites"); setMobileMenuOpen(false); }}
+          className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-sm transition ${activeSection === "sites" ? "bg-[#8b5cf6] text-white" : "text-[#969696] hover:text-white hover:bg-[#171717]"}`}
+        >
+          <Globe className="w-4 h-4" /> Sites
+        </button>
+      </nav>
+
+      <div className="h-[1px] bg-[#292929] my-2"></div>
+
+      <div className="px-4 py-3 text-[#555] text-[11px] font-bold tracking-wider">SISTEMA</div>
+      <div className="px-3 pb-6 space-y-1">
+        <button
+          onClick={() => { setActiveSection("config"); setMobileMenuOpen(false); }}
+          className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-sm transition ${activeSection === "config" ? "bg-[#8b5cf6] text-white" : "text-[#969696] hover:text-white hover:bg-[#171717]"}`}
+        >
+          <Settings className="w-4 h-4" /> Configurações
+        </button>
+        <button
+          onClick={() => logoutMutation.mutate()}
+          className="w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-sm text-[#ef4444] hover:bg-[#ef4444]/10 transition"
+        >
+          <LogOut className="w-4 h-4" /> Sair
+        </button>
+      </div>
+    </div>
+  );
+
   return (
     <div className="min-h-screen flex bg-[#050505] text-white">
-      {/* Sidebar */}
-      <aside className="w-[255px] bg-[#0d0d0d] border-r border-[#292929] fixed h-full flex flex-col z-40 hidden md:flex">
-        <div className="p-6 flex items-center gap-3 border-b border-[#292929]">
-          <div className="w-[42px] h-[42px] rounded-[12px] bg-gradient-to-br from-[#8b5cf6] to-[#5b21b6] flex items-center justify-center font-black text-white">
-            155
-          </div>
-          <div>
-            <strong className="block text-[15px]">Aliança 155</strong>
-            <small className="text-[#969696] text-[11px]">Painel Admin</small>
-          </div>
-        </div>
-
-        <div className="px-4 py-3 text-[#555] text-[11px] font-bold tracking-wider">PRINCIPAL</div>
-        <nav className="flex-1 px-3 space-y-1">
-          <button
-            onClick={() => setActiveSection("dashboard")}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-sm transition ${activeSection === "dashboard" ? "bg-[#8b5cf6] text-white" : "text-[#969696] hover:text-white hover:bg-[#171717]"}`}
-          >
-            <LayoutDashboard className="w-4 h-4" /> Dashboard
-          </button>
-          <button
-            onClick={() => setActiveSection("divulgacoes")}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-sm transition ${activeSection === "divulgacoes" ? "bg-[#8b5cf6] text-white" : "text-[#969696] hover:text-white hover:bg-[#171717]"}`}
-          >
-            <Megaphone className="w-4 h-4" /> Divulgações
-          </button>
-          <button
-            onClick={() => setActiveSection("grupos")}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-sm transition ${activeSection === "grupos" ? "bg-[#8b5cf6] text-white" : "text-[#969696] hover:text-white hover:bg-[#171717]"}`}
-          >
-            <Users className="w-4 h-4" /> Grupos
-          </button>
-          <button
-            onClick={() => setActiveSection("canais")}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-sm transition ${activeSection === "canais" ? "bg-[#8b5cf6] text-white" : "text-[#969696] hover:text-white hover:bg-[#171717]"}`}
-          >
-            <Megaphone className="w-4 h-4" /> Canais
-          </button>
-          <button
-            onClick={() => setActiveSection("sites")}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-sm transition ${activeSection === "sites" ? "bg-[#8b5cf6] text-white" : "text-[#969696] hover:text-white hover:bg-[#171717]"}`}
-          >
-            <Globe className="w-4 h-4" /> Sites
-          </button>
-        </nav>
-
-        <div className="h-[1px] bg-[#292929] my-2"></div>
-
-        <div className="px-4 py-3 text-[#555] text-[11px] font-bold tracking-wider">SISTEMA</div>
-        <div className="px-3 pb-6 space-y-1">
-          <button
-            onClick={() => setActiveSection("config")}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-sm transition ${activeSection === "config" ? "bg-[#8b5cf6] text-white" : "text-[#969696] hover:text-white hover:bg-[#171717]"}`}
-          >
-            <Settings className="w-4 h-4" /> Configurações
-          </button>
-          <button
-            onClick={() => {
-              sessionStorage.removeItem("alianca155_admin");
-              onLogout();
-            }}
-            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-sm text-[#ef4444] hover:bg-[#ef4444]/10 transition"
-          >
-            <LogOut className="w-4 h-4" /> Sair
-          </button>
-        </div>
+      {/* Desktop Sidebar */}
+      <aside className="w-[255px] fixed h-full z-40 hidden md:block">
+        <SidebarContent />
       </aside>
 
+      {/* Mobile Drawer */}
+      {mobileMenuOpen && (
+        <div className="fixed inset-0 z-50 flex md:hidden">
+          <div className="fixed inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setMobileMenuOpen(false)}></div>
+          <div className="relative w-[280px] h-full bg-[#0d0d0d] z-50 flex flex-col">
+            <button onClick={() => setMobileMenuOpen(false)} className="absolute top-5 right-5 text-[#969696] hover:text-white">
+              <X className="w-5 h-5" />
+            </button>
+            <SidebarContent />
+          </div>
+        </div>
+      )}
+
       {/* Main Content Area */}
-      <main className="flex-1 md:ml-[255px] flex flex-col min-h-screen">
+      <main className="flex-1 md:ml-[255px] flex flex-col min-h-screen w-full">
         {/* Header */}
-        <header className="h-[78px] px-8 flex items-center justify-between border-b border-[#292929] bg-[#050505]/88 backdrop-blur sticky top-0 z-30">
-          <div>
-            <h2 className="text-lg font-bold">{navTitles[activeSection] || "Admin"}</h2>
-            <span className="text-xs text-[#969696]">Gerenciamento Aliança 155</span>
+        <header className="h-[78px] px-4 md:px-8 flex items-center justify-between border-b border-[#292929] bg-[#050505]/88 backdrop-blur sticky top-0 z-30">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setMobileMenuOpen(true)}
+              className="p-2 rounded-xl bg-[#171717] border border-[#292929] md:hidden text-white"
+            >
+              <Menu className="w-5 h-5" />
+            </button>
+            <div>
+              <h2 className="text-base md:text-lg font-bold">{navTitles[activeSection] || "Admin"}</h2>
+              <span className="text-xs text-[#969696]">Gerenciamento Aliança 155</span>
+            </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 md:gap-3">
             <a
               href="/"
               target="_blank"
               rel="noopener noreferrer"
-              className="px-4 py-2 rounded-xl bg-[#171717] border border-[#292929] text-xs font-bold hover:bg-[#222] transition flex items-center gap-2"
+              className="px-3 md:px-4 py-2 rounded-xl bg-[#171717] border border-[#292929] text-xs font-bold hover:bg-[#222] transition flex items-center gap-2"
             >
-              Ver site público <ExternalLink className="w-3.5 h-3.5" />
+              Ver site <ExternalLink className="w-3.5 h-3.5" />
             </a>
             <button
               onClick={openCreateModal}
-              className="px-4 py-2 rounded-xl bg-gradient-to-br from-[#8b5cf6] to-[#5b21b6] text-white text-xs font-bold transition hover:brightness-110 flex items-center gap-2 shadow-[0_4px_15px_rgba(139,92,246,.2)]"
+              className="px-3 md:px-4 py-2 rounded-xl bg-gradient-to-br from-[#8b5cf6] to-[#5b21b6] text-white text-xs font-bold transition hover:brightness-110 flex items-center gap-2 shadow-[0_4px_15px_rgba(139,92,246,.2)]"
             >
-              <Plus className="w-4 h-4" /> Nova Divulgação
+              <Plus className="w-4 h-4" /> <span className="hidden sm:inline">Nova Divulgação</span>
             </button>
           </div>
         </header>
 
         {/* Content Body */}
-        <div className="p-8 flex-1">
+        <div className="p-4 md:p-8 flex-1">
+          {/* Global Error Banner */}
+          {(statsError || listError) && (
+            <div className="mb-6 p-4 rounded-xl bg-[#ef4444]/15 border border-[#ef4444]/40 text-[#f87171] flex items-center gap-3">
+              <AlertCircle className="w-5 h-5 shrink-0" />
+              <div className="text-sm">
+                <strong>Erro de comunicação com o servidor:</strong> {statsError?.message || listError?.message || "Falha ao carregar dados."}
+              </div>
+            </div>
+          )}
+
           {/* DASHBOARD */}
           {activeSection === "dashboard" && (
             <div className="space-y-6">
-              <h1 className="text-3xl font-extrabold">Visão Geral</h1>
+              <h1 className="text-2xl md:text-3xl font-extrabold">Visão Geral</h1>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
                 <div className="p-6 rounded-2xl bg-[#111111] border border-[#292929]">
                   <div className="flex items-center justify-between mb-4">
@@ -299,7 +343,9 @@ export default function AdminPanel({ onLogout }: { onLogout: () => void }) {
               <div className="mt-8 p-6 rounded-2xl bg-[#111111] border border-[#292929]">
                 <h3 className="text-lg font-bold mb-4">Últimas Divulgações Cadastradas</h3>
                 {divulgacoes.length === 0 ? (
-                  <p className="text-[#969696] text-sm">Nenhuma divulgação cadastrada ainda.</p>
+                  <div className="text-center py-8 text-[#969696] text-sm">
+                    Nenhuma divulgação cadastrada ainda. Clique em "Nova Divulgação" para começar.
+                  </div>
                 ) : (
                   <div className="space-y-3">
                     {divulgacoes.slice(0, 5).map(item => (
@@ -328,7 +374,7 @@ export default function AdminPanel({ onLogout }: { onLogout: () => void }) {
           {(activeSection === "divulgacoes" || activeSection === "grupos" || activeSection === "canais" || activeSection === "sites") && (
             <div className="space-y-6">
               <div className="flex items-center justify-between">
-                <h1 className="text-3xl font-extrabold capitalize">
+                <h1 className="text-2xl md:text-3xl font-extrabold capitalize">
                   {activeSection === "divulgacoes" ? "Gerenciar Divulgações" : activeSection}
                 </h1>
                 <button
@@ -367,6 +413,10 @@ export default function AdminPanel({ onLogout }: { onLogout: () => void }) {
 
                 {listLoading ? (
                   <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-[#8b5cf6]" /></div>
+                ) : filteredDivulgacoes.filter(item => activeSection === "divulgacoes" || item.type === (activeSection === "grupos" ? "grupo" : activeSection === "canais" ? "canal" : "site")).length === 0 ? (
+                  <div className="text-center py-16 text-[#969696] text-sm bg-[#0d0d0d] rounded-xl border border-[#292929]">
+                    Nenhuma divulgação encontrada nesta categoria.
+                  </div>
                 ) : (
                   <div className="space-y-3">
                     {filteredDivulgacoes
@@ -375,9 +425,9 @@ export default function AdminPanel({ onLogout }: { onLogout: () => void }) {
                         <div key={item.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-xl bg-[#0d0d0d] border border-[#292929] gap-4">
                           <div className="flex items-center gap-4">
                             {item.image ? (
-                              <img src={item.image} alt="" className="w-14 h-14 rounded-xl object-cover" />
+                              <img src={item.image} alt="" className="w-14 h-14 rounded-xl object-cover shrink-0" />
                             ) : (
-                              <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-[#8b5cf6] to-[#5b21b6] flex items-center justify-center font-bold text-sm">
+                              <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-[#8b5cf6] to-[#5b21b6] flex items-center justify-center font-bold text-sm shrink-0">
                                 155
                               </div>
                             )}
@@ -429,7 +479,7 @@ export default function AdminPanel({ onLogout }: { onLogout: () => void }) {
           {/* CONFIGURAÇÕES */}
           {activeSection === "config" && (
             <div className="space-y-6 max-w-2xl">
-              <h1 className="text-3xl font-extrabold">Configurações do Sistema</h1>
+              <h1 className="text-2xl md:text-3xl font-extrabold">Configurações do Sistema</h1>
 
               <div className="p-6 rounded-2xl bg-[#111111] border border-[#292929] space-y-4">
                 <h3 className="text-lg font-bold flex items-center gap-2">🔐 Alterar Senha do Admin</h3>
@@ -493,7 +543,7 @@ export default function AdminPanel({ onLogout }: { onLogout: () => void }) {
       {/* Modal CRUD */}
       {isModalOpen && editingItem && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="w-full max-w-lg bg-[#111111] border border-[#292929] rounded-2xl p-6 relative">
+          <div className="w-full max-w-lg bg-[#111111] border border-[#292929] rounded-2xl p-6 relative max-h-[90vh] overflow-y-auto">
             <button onClick={closeModal} className="absolute top-5 right-5 text-[#969696] hover:text-white">
               <X className="w-5 h-5" />
             </button>

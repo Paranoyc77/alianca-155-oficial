@@ -9,7 +9,6 @@ export default function AdminLogin({ onLoginSuccess }: { onLoginSuccess: () => v
 
   const loginMutation = trpc.alianca.login.useMutation({
     onSuccess: () => {
-      sessionStorage.setItem("alianca155_admin", "true");
       onLoginSuccess();
     },
     onError: (err) => {
