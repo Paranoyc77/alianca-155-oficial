@@ -1,6 +1,7 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, beforeAll } from "vitest";
 import { appRouter } from "./routers";
 import type { TrpcContext } from "./_core/context";
+import * as db from "./db";
 
 function createTestContext(): TrpcContext {
   const headers: Record<string, string> = {};
@@ -24,6 +25,10 @@ function createTestContext(): TrpcContext {
 }
 
 describe("Aliança 155 tRPC Router", () => {
+  beforeAll(async () => {
+    await db.setConfigValue("admin_password", "155admin");
+  });
+
   it("should list divulgacoes and stats (public vs admin)", async () => {
     const ctx = createTestContext();
     const caller = appRouter.createCaller(ctx);
@@ -82,6 +87,7 @@ describe("Aliança 155 tRPC Router", () => {
     const ctx = createTestContext();
     const caller = appRouter.createCaller(ctx);
 
+    await db.setConfigValue("admin_password", "155admin");
     await caller.alianca.login({ password: "155admin" });
 
     // Fail with wrong old password
@@ -93,7 +99,7 @@ describe("Aliança 155 tRPC Router", () => {
     const res = await caller.alianca.changePassword({ oldPassword: "155admin", newPassword: "newpassword123" });
     expect(res.success).toBe(true);
 
-    // Revert password back for other tests
-    await caller.alianca.changePassword({ oldPassword: "newpassword123", newPassword: "155admin" });
+    // Revert password back
+    await db.setConfigValue("admin_password", "155admin");
   });
 });

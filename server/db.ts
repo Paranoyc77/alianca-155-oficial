@@ -141,6 +141,43 @@ export async function setConfigValue(key: string, value: string): Promise<void> 
   await db.insert(appConfig).values({ key, value }).onDuplicateKeyUpdate({ set: { value } });
 }
 
+// Obter todas as configurações globais em formato de objeto
+export async function getAllSiteSettings(): Promise<Record<string, string>> {
+  const db = await getDb();
+  const defaults = {
+    site_title: "Aliança 155",
+    site_subtitle: "Central de Divulgações",
+    hero_badge: "ALIANÇA 155",
+    hero_title_main: "Central de Divulgações",
+    hero_title_accent: "Oficial",
+    hero_description: "Encontre os melhores grupos, canais e sites recomendados pela nossa comunidade.",
+    footer_text: "Aliança 155 — Todos os direitos reservados.",
+    admin_btn_text: "Painel Admin",
+  };
+
+  if (!db) return defaults;
+  try {
+    const res = await db.select().from(appConfig);
+    const settings: Record<string, string> = { ...defaults };
+    for (const row of res) {
+      settings[row.key] = row.value;
+    }
+    return settings;
+  } catch (err) {
+    return defaults;
+  }
+}
+
+export async function updateSiteSettings(settings: Record<string, string>): Promise<void> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  for (const [key, value] of Object.entries(settings)) {
+    if (value !== undefined) {
+      await db.insert(appConfig).values({ key, value: String(value) }).onDuplicateKeyUpdate({ set: { value: String(value) } });
+    }
+  }
+}
+
 export async function clearAllData(): Promise<void> {
   const db = await getDb();
   if (!db) throw new Error("Database not available");

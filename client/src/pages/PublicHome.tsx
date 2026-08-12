@@ -1,204 +1,180 @@
 import { useState, useMemo } from "react";
 import { trpc } from "@/lib/trpc";
-import { Loader2, Search, Lock, ExternalLink, ShieldAlert, FolderPlus, Plus, Edit, Trash2, Key, LogOut, BarChart3, Database, Globe, Users, Megaphone, Settings } from "lucide-react";
-import { toast } from "sonner";
+import { Search, ExternalLink, Users, Megaphone, Globe, Sparkles, Loader2, Lock } from "lucide-react";
+import { Link } from "wouter";
 
 export default function PublicHome() {
+  const [activeTab, setActiveTab] = useState<"all" | "grupo" | "canal" | "site">("all");
   const [searchQuery, setSearchQuery] = useState("");
-  const [filterType, setFilterType] = useState("all");
 
-  const { data: divulgacoes = [], isLoading, refetch } = trpc.alianca.list.useQuery();
+  const { data: divulgacoes = [], isLoading: listLoading } = trpc.alianca.list.useQuery();
+  const { data: settings = {} } = trpc.alianca.getSettings.useQuery();
 
   const filteredDivulgacoes = useMemo(() => {
     return divulgacoes.filter(item => {
-      const matchesSearch = searchQuery === "" || 
+      const matchesTab = activeTab === "all" || item.type === activeTab;
+      const matchesSearch = searchQuery === "" ||
         item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
         (item.description && item.description.toLowerCase().includes(searchQuery.toLowerCase())) ||
         item.link.toLowerCase().includes(searchQuery.toLowerCase());
-      
-      const matchesType = filterType === "all" || item.type === filterType;
-      return matchesSearch && matchesType;
+      return matchesTab && matchesSearch;
     });
-  }, [divulgacoes, searchQuery, filterType]);
+  }, [divulgacoes, activeTab, searchQuery]);
 
-  const grupos = useMemo(() => filteredDivulgacoes.filter(x => x.type === "grupo"), [filteredDivulgacoes]);
-  const canais = useMemo(() => filteredDivulgacoes.filter(x => x.type === "canal"), [filteredDivulgacoes]);
-  const sites = useMemo(() => filteredDivulgacoes.filter(x => x.type === "site"), [filteredDivulgacoes]);
+  const counts = useMemo(() => {
+    return {
+      all: divulgacoes.length,
+      grupo: divulgacoes.filter(x => x.type === "grupo").length,
+      canal: divulgacoes.filter(x => x.type === "canal").length,
+      site: divulgacoes.filter(x => x.type === "site").length,
+    };
+  }, [divulgacoes]);
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#050505] text-white">
-      {/* Header */}
-      <header className="h-[78px] px-[6%] flex items-center justify-between border-b border-[#292929] bg-[#050505]/88 backdrop-blur-[15px] sticky top-0 z-50">
+    <div className="min-h-screen bg-[#050505] text-white flex flex-col font-sans selection:bg-[#8b5cf6] selection:text-white">
+      {/* Navbar */}
+      <header className="border-b border-[#1f1f1f] bg-[#050505]/90 backdrop-blur sticky top-0 z-40 px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="w-[48px] h-[48px] flex items-center justify-center rounded-[14px] bg-gradient-to-br from-[#8b5cf6] to-[#5b21b6] font-black text-lg shadow-[0_0_30px_rgba(139,92,246,.25)]">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#8b5cf6] to-[#5b21b6] flex items-center justify-center font-black text-white shadow-[0_0_20px_rgba(139,92,246,0.3)]">
             155
           </div>
           <div>
-            <h2 className="font-bold text-[17px]">Aliança 155</h2>
-            <span className="text-[#969696] text-[11px] block mt-[3px]">Central de Divulgações</span>
+            <span className="font-bold text-base block tracking-wide">{settings.site_title || "Aliança 155"}</span>
+            <span className="text-xs text-[#969696] block">{settings.site_subtitle || "Central de Divulgações"}</span>
           </div>
         </div>
 
-        <button
-          onClick={() => {
-            window.location.href = "/admin";
-          }}
-          className="px-[17px] py-[12px] rounded-[11px] bg-gradient-to-br from-[#8b5cf6] to-[#5b21b6] text-white font-bold transition hover:-translate-y-0.5 hover:brightness-110 shadow-[0_8px_25px_rgba(139,92,246,.15)] flex items-center gap-2"
+        <Link
+          href="/admin"
+          className="px-4 py-2 rounded-xl bg-[#141414] hover:bg-[#1f1f1f] border border-[#292929] text-xs font-bold transition flex items-center gap-2 text-[#bca9ff]"
         >
-          <Lock className="w-4 h-4" />
-          Painel Admin
-        </button>
+          <Lock className="w-3.5 h-3.5" /> {settings.admin_btn_text || "Painel Admin"}
+        </Link>
       </header>
 
-      {/* Main Content */}
-      <main className="w-[min(1200px,92%)] mx-auto py-[70px] flex-1">
-        <div className="text-center max-w-[850px] mx-auto mb-[50px]">
-          <span className="inline-block px-[13px] py-[8px] rounded-[30px] border border-[#8b5cf6]/30 bg-[#8b5cf6]/10 text-[#c4b5fd] text-[11px] font-bold tracking-[.7px]">
-            ⚡ ALIANÇA 155
-          </span>
-          <h1 className="text-[54px] leading-[1.05] font-extrabold my-[22px]">
-            Central de Divulgações <span className="text-[#a78bfa]">Oficial</span>
-          </h1>
-          <p className="text-[#969696] text-[17px] leading-[1.6]">
-            Encontre os melhores grupos, canais e sites recomendados pela nossa comunidade.
-          </p>
+      {/* Hero Section */}
+      <section className="px-6 py-16 md:py-24 text-center max-w-4xl mx-auto space-y-6">
+        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#8b5cf6]/10 border border-[#8b5cf6]/30 text-[#bca9ff] text-xs font-bold tracking-wider">
+          <Sparkles className="w-3.5 h-3.5" /> {settings.hero_badge || "ALIANÇA 155"}
         </div>
+        
+        <h1 className="text-4xl md:text-6xl font-black tracking-tight leading-tight">
+          {settings.hero_title_main || "Central de Divulgações"}{" "}
+          <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#8b5cf6] to-[#c4b5fd]">
+            {settings.hero_title_accent || "Oficial"}
+          </span>
+        </h1>
 
-        {/* Search & Filter */}
-        <div className="grid grid-cols-1 md:grid-cols-[1fr_190px] gap-[10px] mb-[50px]">
-          <div className="relative">
-            <Search className="absolute left-[15px] top-[50%] -translate-y-1/2 w-5 h-5 text-[#969696]" />
+        <p className="text-[#969696] text-base md:text-lg max-w-2xl mx-auto leading-relaxed">
+          {settings.hero_description || "Encontre os melhores grupos, canais e sites recomendados pela nossa comunidade."}
+        </p>
+
+        {/* Search & Filter Bar */}
+        <div className="pt-4 max-w-2xl mx-auto flex flex-col sm:flex-row gap-3">
+          <div className="relative flex-1">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#969696]" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="🔎 Pesquisar por nome ou link..."
-              className="w-full pl-[48px] pr-[15px] py-[15px] bg-[#0d0d0d] text-white border border-[#292929] rounded-[12px] outline-none focus:border-[#8b5cf6]"
+              placeholder="Pesquisar por nome ou link..."
+              className="w-full pl-11 pr-4 py-3.5 bg-[#111111] text-white border border-[#262626] rounded-2xl outline-none focus:border-[#8b5cf6] transition text-sm shadow-inner"
             />
           </div>
-          <select
-            value={filterType}
-            onChange={(e) => setFilterType(e.target.value)}
-            className="w-full p-[15px] bg-[#0d0d0d] text-white border border-[#292929] rounded-[12px] outline-none focus:border-[#8b5cf6]"
-          >
-            <option value="all">Todas as categorias</option>
-            <option value="grupo">Grupos</option>
-            <option value="canal">Canais</option>
-            <option value="site">Sites</option>
-          </select>
         </div>
 
-        {isLoading ? (
-          <div className="flex justify-center py-20">
+        {/* Category Tabs */}
+        <div className="flex flex-wrap items-center justify-center gap-2 pt-4">
+          <button
+            onClick={() => setActiveTab("all")}
+            className={`px-5 py-2.5 rounded-xl font-bold text-xs md:text-sm transition flex items-center gap-2 ${activeTab === "all" ? "bg-[#8b5cf6] text-white shadow-[0_4px_20px_rgba(139,92,246,0.3)]" : "bg-[#111111] hover:bg-[#1a1a1a] text-[#969696] border border-[#262626]"}`}
+          >
+            Todos ({counts.all})
+          </button>
+          <button
+            onClick={() => setActiveTab("grupo")}
+            className={`px-5 py-2.5 rounded-xl font-bold text-xs md:text-sm transition flex items-center gap-2 ${activeTab === "grupo" ? "bg-[#8b5cf6] text-white shadow-[0_4px_20px_rgba(139,92,246,0.3)]" : "bg-[#111111] hover:bg-[#1a1a1a] text-[#969696] border border-[#262626]"}`}
+          >
+            <Users className="w-4 h-4" /> Grupos ({counts.grupo})
+          </button>
+          <button
+            onClick={() => setActiveTab("canal")}
+            className={`px-5 py-2.5 rounded-xl font-bold text-xs md:text-sm transition flex items-center gap-2 ${activeTab === "canal" ? "bg-[#8b5cf6] text-white shadow-[0_4px_20px_rgba(139,92,246,0.3)]" : "bg-[#111111] hover:bg-[#1a1a1a] text-[#969696] border border-[#262626]"}`}
+          >
+            <Megaphone className="w-4 h-4" /> Canais ({counts.canal})
+          </button>
+          <button
+            onClick={() => setActiveTab("site")}
+            className={`px-5 py-2.5 rounded-xl font-bold text-xs md:text-sm transition flex items-center gap-2 ${activeTab === "site" ? "bg-[#8b5cf6] text-white shadow-[0_4px_20px_rgba(139,92,246,0.3)]" : "bg-[#111111] hover:bg-[#1a1a1a] text-[#969696] border border-[#262626]"}`}
+          >
+            <Globe className="w-4 h-4" /> Sites ({counts.site})
+          </button>
+        </div>
+      </section>
+
+      {/* Grid Content */}
+      <main className="max-w-7xl mx-auto px-6 pb-24 flex-1 w-full">
+        {listLoading ? (
+          <div className="flex justify-center items-center py-24">
             <Loader2 className="w-8 h-8 animate-spin text-[#8b5cf6]" />
           </div>
         ) : filteredDivulgacoes.length === 0 ? (
-          <div className="text-center py-20 bg-[#111111] border border-[#292929] rounded-[18px]">
-            <p className="text-[#969696] text-lg">Nenhuma divulgação encontrada.</p>
+          <div className="text-center py-24 bg-[#0d0d0d] border border-[#222] rounded-3xl p-8 max-w-lg mx-auto">
+            <div className="w-16 h-16 rounded-2xl bg-[#171717] flex items-center justify-center mx-auto mb-4 text-[#969696]">
+              <Search className="w-6 h-6" />
+            </div>
+            <h3 className="text-lg font-bold mb-1">Nenhuma divulgação encontrada</h3>
+            <p className="text-sm text-[#969696]">Tente buscar por outro termo ou selecione outra categoria.</p>
           </div>
         ) : (
-          <div className="space-y-16">
-            {/* Grupos */}
-            {(filterType === "all" || filterType === "grupo") && grupos.length > 0 && (
-              <section>
-                <div className="flex items-center justify-between mb-[17px]">
-                  <h2 className="text-[21px] font-bold flex items-center gap-2">👥 Grupos</h2>
-                  <span className="text-[#aaa] bg-[#171717] border border-[#292929] rounded-[30px] px-[10px] py-[5px] text-[12px]">
-                    {grupos.length}
-                  </span>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-[18px]">
-                  {grupos.map((item) => (
-                    <DivulgacaoCard key={item.id} item={item} />
-                  ))}
-                </div>
-              </section>
-            )}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredDivulgacoes.map((item) => (
+              <div
+                key={item.id}
+                className="group bg-[#0d0d0d] border border-[#222] hover:border-[#8b5cf6]/50 rounded-3xl p-6 transition duration-300 flex flex-col justify-between hover:shadow-[0_10px_30px_rgba(139,92,246,0.1)] relative overflow-hidden"
+              >
+                <div className="absolute top-0 right-0 w-32 h-32 bg-[#8b5cf6]/5 rounded-full blur-2xl group-hover:bg-[#8b5cf6]/10 transition"></div>
 
-            {/* Canais */}
-            {(filterType === "all" || filterType === "canal") && canais.length > 0 && (
-              <section>
-                <div className="flex items-center justify-between mb-[17px]">
-                  <h2 className="text-[21px] font-bold flex items-center gap-2">📣 Canais</h2>
-                  <span className="text-[#aaa] bg-[#171717] border border-[#292929] rounded-[30px] px-[10px] py-[5px] text-[12px]">
-                    {canais.length}
-                  </span>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-[18px]">
-                  {canais.map((item) => (
-                    <DivulgacaoCard key={item.id} item={item} />
-                  ))}
-                </div>
-              </section>
-            )}
+                <div>
+                  <div className="flex items-start gap-4 mb-4">
+                    {item.image ? (
+                      <img src={item.image} alt={item.title} className="w-16 h-16 rounded-2xl object-cover shrink-0 border border-[#2a2a2a]" />
+                    ) : (
+                      <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#8b5cf6] to-[#5b21b6] flex items-center justify-center font-black text-lg shrink-0 shadow-[0_0_15px_rgba(139,92,246,0.2)]">
+                        155
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <span className="inline-block px-2.5 py-0.5 rounded-full bg-[#8b5cf6]/15 text-[#bca9ff] text-[10px] font-bold uppercase tracking-wider mb-1.5">
+                        {item.type}
+                      </span>
+                      <h3 className="font-bold text-lg text-white truncate">{item.title}</h3>
+                    </div>
+                  </div>
 
-            {/* Sites */}
-            {(filterType === "all" || filterType === "site") && sites.length > 0 && (
-              <section>
-                <div className="flex items-center justify-between mb-[17px]">
-                  <h2 className="text-[21px] font-bold flex items-center gap-2">🌐 Sites</h2>
-                  <span className="text-[#aaa] bg-[#171717] border border-[#292929] rounded-[30px] px-[10px] py-[5px] text-[12px]">
-                    {sites.length}
-                  </span>
+                  <p className="text-[#969696] text-sm line-clamp-3 mb-6 leading-relaxed">
+                    {item.description || "Sem descrição informada para esta divulgação."}
+                  </p>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-[18px]">
-                  {sites.map((item) => (
-                    <DivulgacaoCard key={item.id} item={item} />
-                  ))}
-                </div>
-              </section>
-            )}
+
+                <a
+                  href={item.link.startsWith("http") ? item.link : `https://${item.link}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full py-3 px-4 rounded-xl bg-[#171717] hover:bg-[#8b5cf6] text-white font-bold text-xs transition duration-200 flex items-center justify-center gap-2 group-hover:shadow-[0_4px_15px_rgba(139,92,246,0.3)]"
+                >
+                  Acessar Agora <ExternalLink className="w-3.5 h-3.5" />
+                </a>
+              </div>
+            ))}
           </div>
         )}
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-[#292929] py-8 text-center text-[#969696] text-sm">
-        <p>Aliança 155 © {new Date().getFullYear()} — Todos os direitos reservados.</p>
+      <footer className="border-t border-[#1f1f1f] py-8 text-center text-xs text-[#777] bg-[#050505]">
+        <p>{settings.footer_text || "Aliança 155 — Todos os direitos reservados."}</p>
       </footer>
-    </div>
-  );
-}
-
-function DivulgacaoCard({ item }: { item: { id: number; title: string; description: string | null; type: string; link: string; image: string | null } }) {
-  const typeLabels: Record<string, string> = {
-    grupo: "Grupo",
-    canal: "Canal",
-    site: "Site",
-  };
-
-  return (
-    <div className="overflow-hidden bg-gradient-to-br from-[#151515] to-[#0d0d0d] border border-[#292929] rounded-[18px] transition hover:-translate-y-1 hover:border-[#8b5cf6]/45 hover:shadow-[0_15px_40px_rgba(0,0,0,.3)] flex flex-col justify-between">
-      <div>
-        <div className="h-[160px] bg-[#080808] flex items-center justify-center overflow-hidden">
-          {item.image ? (
-            <img src={item.image} alt={item.title} className="w-full h-full object-cover" />
-          ) : (
-            <div className="w-[65px] h-[65px] rounded-[18px] bg-gradient-to-br from-[#8b5cf6] to-[#5b21b6] flex items-center justify-center font-black text-white text-lg">
-              155
-            </div>
-          )}
-        </div>
-        <div className="p-[18px]">
-          <span className="inline-block px-[9px] py-[5px] rounded-[20px] bg-[#8b5cf6]/12 text-[#bca9ff] text-[10px] font-bold mb-[10px]">
-            {typeLabels[item.type] || item.type}
-          </span>
-          <h3 className="text-[17px] font-bold mb-[8px] line-clamp-1">{item.title}</h3>
-          <p className="text-[#969696] leading-[1.5] text-[13px] min-height-[40px] mb-[16px] line-clamp-2">
-            {item.description || "Nenhuma descrição informada."}
-          </p>
-        </div>
-      </div>
-      <div className="px-[18px] pb-[18px]">
-        <a
-          href={item.link.startsWith("http") ? item.link : `https://${item.link}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="w-full py-[12px] rounded-[11px] bg-[#222] hover:bg-[#8b5cf6] text-white font-bold transition flex items-center justify-center gap-2 text-sm"
-        >
-          Acessar Link <ExternalLink className="w-4 h-4" />
-        </a>
-      </div>
     </div>
   );
 }

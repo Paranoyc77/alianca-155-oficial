@@ -1,6 +1,6 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { trpc } from "@/lib/trpc";
-import { LayoutDashboard, Megaphone, Users, Globe, Settings, LogOut, Plus, Search, ExternalLink, Edit, Trash2, Key, AlertTriangle, ShieldAlert, X, Check, Loader2, Menu, AlertCircle } from "lucide-react";
+import { LayoutDashboard, Megaphone, Users, Globe, Settings, LogOut, Plus, Search, ExternalLink, Edit, Trash2, Key, AlertTriangle, X, Loader2, Menu, AlertCircle, FileText, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 
 export default function AdminPanel({ onLogout }: { onLogout: () => void }) {
@@ -9,9 +9,37 @@ export default function AdminPanel({ onLogout }: { onLogout: () => void }) {
   const [filterType, setFilterType] = useState("all");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  // Modal State
+  // Modal State para Divulgações
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<{ id?: number; title: string; description: string; type: "grupo" | "canal" | "site"; link: string; image: string } | null>(null);
+
+  // Configurações globais do site state
+  const { data: settings = {}, refetch: refetchSettings } = trpc.alianca.getSettings.useQuery();
+  const [siteForm, setSiteForm] = useState({
+    site_title: "",
+    site_subtitle: "",
+    hero_badge: "",
+    hero_title_main: "",
+    hero_title_accent: "",
+    hero_description: "",
+    footer_text: "",
+    admin_btn_text: "",
+  });
+
+  useEffect(() => {
+    if (settings && Object.keys(settings).length > 0) {
+      setSiteForm({
+        site_title: settings.site_title || "",
+        site_subtitle: settings.site_subtitle || "",
+        hero_badge: settings.hero_badge || "",
+        hero_title_main: settings.hero_title_main || "",
+        hero_title_accent: settings.hero_title_accent || "",
+        hero_description: settings.hero_description || "",
+        footer_text: settings.footer_text || "",
+        admin_btn_text: settings.admin_btn_text || "",
+      });
+    }
+  }, [settings]);
 
   // Password change state
   const [oldPassword, setOldPassword] = useState("");
@@ -29,6 +57,14 @@ export default function AdminPanel({ onLogout }: { onLogout: () => void }) {
     onError: () => {
       onLogout();
     }
+  });
+
+  const updateSettingsMutation = trpc.alianca.updateSettings.useMutation({
+    onSuccess: () => {
+      toast.success("Conteúdo do site atualizado com sucesso!");
+      refetchSettings();
+    },
+    onError: (err) => toast.error(err.message)
   });
 
   const createMutation = trpc.alianca.create.useMutation({
@@ -140,6 +176,11 @@ export default function AdminPanel({ onLogout }: { onLogout: () => void }) {
     }
   };
 
+  const handleSaveSiteSettings = (e: React.FormEvent) => {
+    e.preventDefault();
+    updateSettingsMutation.mutate(siteForm);
+  };
+
   const handlePasswordChange = (e: React.FormEvent) => {
     e.preventDefault();
     if (!oldPassword || !newPassword || !confirmPassword) {
@@ -165,6 +206,7 @@ export default function AdminPanel({ onLogout }: { onLogout: () => void }) {
 
   const navTitles: Record<string, string> = {
     dashboard: "Dashboard",
+    editSite: "Editar Conteúdo do Site",
     divulgacoes: "Gerenciar Divulgações",
     grupos: "Grupos",
     canais: "Canais",
@@ -180,7 +222,7 @@ export default function AdminPanel({ onLogout }: { onLogout: () => void }) {
         </div>
         <div>
           <strong className="block text-[15px]">Aliança 155</strong>
-          <small className="text-[#969696] text-[11px]">Painel Admin</small>
+          <small className="text-[#969696] text-[11px]">Painel Admin Global</small>
         </div>
       </div>
 
@@ -191,6 +233,12 @@ export default function AdminPanel({ onLogout }: { onLogout: () => void }) {
           className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-sm transition ${activeSection === "dashboard" ? "bg-[#8b5cf6] text-white" : "text-[#969696] hover:text-white hover:bg-[#171717]"}`}
         >
           <LayoutDashboard className="w-4 h-4" /> Dashboard
+        </button>
+        <button
+          onClick={() => { setActiveSection("editSite"); setMobileMenuOpen(false); }}
+          className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-sm transition ${activeSection === "editSite" ? "bg-[#8b5cf6] text-white" : "text-[#969696] hover:text-white hover:bg-[#171717]"}`}
+        >
+          <FileText className="w-4 h-4" /> Editar Textos do Site
         </button>
         <button
           onClick={() => { setActiveSection("divulgacoes"); setMobileMenuOpen(false); }}
@@ -271,7 +319,7 @@ export default function AdminPanel({ onLogout }: { onLogout: () => void }) {
             </button>
             <div>
               <h2 className="text-base md:text-lg font-bold">{navTitles[activeSection] || "Admin"}</h2>
-              <span className="text-xs text-[#969696]">Gerenciamento Aliança 155</span>
+              <span className="text-xs text-[#969696]">Painel de Edição Global</span>
             </div>
           </div>
 
@@ -300,7 +348,7 @@ export default function AdminPanel({ onLogout }: { onLogout: () => void }) {
             <div className="mb-6 p-4 rounded-xl bg-[#ef4444]/15 border border-[#ef4444]/40 text-[#f87171] flex items-center gap-3">
               <AlertCircle className="w-5 h-5 shrink-0" />
               <div className="text-sm">
-                <strong>Erro de comunicação com o servidor:</strong> {statsError?.message || listError?.message || "Falha ao carregar dados."}
+                <strong>Erro de comunicação:</strong> {statsError?.message || listError?.message || "Falha ao carregar dados."}
               </div>
             </div>
           )}
@@ -340,33 +388,128 @@ export default function AdminPanel({ onLogout }: { onLogout: () => void }) {
                 </div>
               </div>
 
-              <div className="mt-8 p-6 rounded-2xl bg-[#111111] border border-[#292929]">
-                <h3 className="text-lg font-bold mb-4">Últimas Divulgações Cadastradas</h3>
-                {divulgacoes.length === 0 ? (
-                  <div className="text-center py-8 text-[#969696] text-sm">
-                    Nenhuma divulgação cadastrada ainda. Clique em "Nova Divulgação" para começar.
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {divulgacoes.slice(0, 5).map(item => (
-                      <div key={item.id} className="flex items-center justify-between p-3 rounded-xl bg-[#0d0d0d] border border-[#292929]">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-lg bg-[#222] flex items-center justify-center font-bold text-xs">
-                            {item.title.substring(0, 2).toUpperCase()}
-                          </div>
-                          <div>
-                            <div className="font-bold text-sm">{item.title}</div>
-                            <span className="text-xs text-[#969696] uppercase">{item.type}</span>
-                          </div>
-                        </div>
-                        <a href={item.link} target="_blank" rel="noopener noreferrer" className="text-xs text-[#8b5cf6] hover:underline flex items-center gap-1">
-                          Acessar <ExternalLink className="w-3 h-3" />
-                        </a>
-                      </div>
-                    ))}
-                  </div>
-                )}
+              <div className="mt-8 p-6 rounded-2xl bg-[#111111] border border-[#292929] space-y-4">
+                <h3 className="text-lg font-bold">✨ Atalhos de Edição Global</h3>
+                <p className="text-sm text-[#969696]">Agora você pode alterar todos os textos, títulos, rodapé e identidade do site diretamente pelo painel administrativo.</p>
+                <div className="flex flex-wrap gap-3 pt-2">
+                  <button
+                    onClick={() => setActiveSection("editSite")}
+                    className="px-5 py-3 rounded-xl bg-[#8b5cf6] text-white font-bold text-sm transition hover:brightness-110 flex items-center gap-2"
+                  >
+                    <FileText className="w-4 h-4" /> Editar Textos do Site
+                  </button>
+                  <button
+                    onClick={() => setActiveSection("divulgacoes")}
+                    className="px-5 py-3 rounded-xl bg-[#1c1c1c] border border-[#292929] hover:bg-[#252525] text-white font-bold text-sm transition flex items-center gap-2"
+                  >
+                    <Megaphone className="w-4 h-4" /> Gerenciar Divulgações
+                  </button>
+                </div>
               </div>
+            </div>
+          )}
+
+          {/* EDITAR CONTEÚDO DO SITE (TEXTOS E IDENTIDADE) */}
+          {activeSection === "editSite" && (
+            <div className="space-y-6 max-w-3xl">
+              <div>
+                <h1 className="text-2xl md:text-3xl font-extrabold mb-1">Editor de Conteúdo do Site</h1>
+                <p className="text-sm text-[#969696]">Altere todos os títulos, subtítulos, selos e rodapé exibidos na página pública em tempo real.</p>
+              </div>
+
+              <form onSubmit={handleSaveSiteSettings} className="p-6 rounded-2xl bg-[#111111] border border-[#292929] space-y-5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-1.5">Nome do Site (Navbar)</label>
+                    <input
+                      type="text"
+                      value={siteForm.site_title}
+                      onChange={(e) => setSiteForm({ ...siteForm, site_title: e.target.value })}
+                      className="w-full p-3 bg-[#0d0d0d] text-white border border-[#292929] rounded-xl outline-none focus:border-[#8b5cf6] text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1.5">Subtítulo (Navbar)</label>
+                    <input
+                      type="text"
+                      value={siteForm.site_subtitle}
+                      onChange={(e) => setSiteForm({ ...siteForm, site_subtitle: e.target.value })}
+                      className="w-full p-3 bg-[#0d0d0d] text-white border border-[#292929] rounded-xl outline-none focus:border-[#8b5cf6] text-sm"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-1.5">Texto do Selo Hero (Topo)</label>
+                    <input
+                      type="text"
+                      value={siteForm.hero_badge}
+                      onChange={(e) => setSiteForm({ ...siteForm, hero_badge: e.target.value })}
+                      className="w-full p-3 bg-[#0d0d0d] text-white border border-[#292929] rounded-xl outline-none focus:border-[#8b5cf6] text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1.5">Texto do Botão Admin</label>
+                    <input
+                      type="text"
+                      value={siteForm.admin_btn_text}
+                      onChange={(e) => setSiteForm({ ...siteForm, admin_btn_text: e.target.value })}
+                      className="w-full p-3 bg-[#0d0d0d] text-white border border-[#292929] rounded-xl outline-none focus:border-[#8b5cf6] text-sm"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-1.5">Título Principal (Hero)</label>
+                    <input
+                      type="text"
+                      value={siteForm.hero_title_main}
+                      onChange={(e) => setSiteForm({ ...siteForm, hero_title_main: e.target.value })}
+                      className="w-full p-3 bg-[#0d0d0d] text-white border border-[#292929] rounded-xl outline-none focus:border-[#8b5cf6] text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1.5">Título Destaque Roxo (Hero)</label>
+                    <input
+                      type="text"
+                      value={siteForm.hero_title_accent}
+                      onChange={(e) => setSiteForm({ ...siteForm, hero_title_accent: e.target.value })}
+                      className="w-full p-3 bg-[#0d0d0d] text-white border border-[#292929] rounded-xl outline-none focus:border-[#8b5cf6] text-sm"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-1.5">Descrição / Subtítulo (Hero)</label>
+                  <textarea
+                    value={siteForm.hero_description}
+                    onChange={(e) => setSiteForm({ ...siteForm, hero_description: e.target.value })}
+                    className="w-full p-3 bg-[#0d0d0d] text-white border border-[#292929] rounded-xl outline-none focus:border-[#8b5cf6] text-sm min-h-[90px]"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-1.5">Texto do Rodapé (Footer)</label>
+                  <input
+                    type="text"
+                    value={siteForm.footer_text}
+                    onChange={(e) => setSiteForm({ ...siteForm, footer_text: e.target.value })}
+                    className="w-full p-3 bg-[#0d0d0d] text-white border border-[#292929] rounded-xl outline-none focus:border-[#8b5cf6] text-sm"
+                  />
+                </div>
+
+                <div className="pt-4 flex justify-end">
+                  <button
+                    type="submit"
+                    disabled={updateSettingsMutation.isPending}
+                    className="py-3 px-6 rounded-xl bg-gradient-to-br from-[#8b5cf6] to-[#5b21b6] text-white font-bold text-sm transition hover:brightness-110 flex items-center gap-2"
+                  >
+                    {updateSettingsMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />} Salvar Alterações do Site
+                  </button>
+                </div>
+              </form>
             </div>
           )}
 
@@ -479,7 +622,7 @@ export default function AdminPanel({ onLogout }: { onLogout: () => void }) {
           {/* CONFIGURAÇÕES */}
           {activeSection === "config" && (
             <div className="space-y-6 max-w-2xl">
-              <h1 className="text-2xl md:text-3xl font-extrabold">Configurações do Sistema</h1>
+              <h1 className="text-2xl md:text-3xl font-extrabold">Configurações de Segurança</h1>
 
               <div className="p-6 rounded-2xl bg-[#111111] border border-[#292929] space-y-4">
                 <h3 className="text-lg font-bold flex items-center gap-2">🔐 Alterar Senha do Admin</h3>

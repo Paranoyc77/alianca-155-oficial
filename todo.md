@@ -1,11 +1,9 @@
-# Aliança 155 - Todo List
+# Aliança 155 - Novo Painel Admin Global
 
-- [x] Fase 1: Criar tabela de divulgações e configuração de senha no Drizzle schema (`drizzle/schema.ts`)
-- [x] Fase 2: Aplicar migração SQL via `webdev_execute_sql`
-- [x] Fase 3: Implementar procedimentos tRPC para listagem pública, CRUD de divulgações, autenticação por senha e estatísticas
-- [x] Fase 4: Estilizar `client/src/index.css` com o tema dark (#050505) e roxo accent (#8b5cf6) idêntico ao original
-- [x] Fase 5: Desenvolver a Área Pública com listagem por categorias (Grupos, Canais, Sites), busca, filtros e cards de divulgação
-- [x] Fase 6: Implementar autenticação real por cookie/token de sessão no backend para proteger todas as mutations admin
-- [x] Fase 7: Adicionar tratamento de erro nas queries do painel administrativo e menu mobile responsivo
-- [x] Fase 8: Expandir testes unitários em `server/alianca.test.ts` para cobrir CRUD completo, login e changePassword
-- [x] Fase 9: Realizar revisão visual final e salvar checkpoint definitivo
+- [x] Fase 1: Mapear o conteúdo atual do site e definir o modelo de edição global
+- [x] Fase 2: Expandir funções de banco para configurações globais (`appConfig` table)
+- [x] Fase 3: Implementar procedimentos tRPC protegidos para leitura e atualização de configurações e divulgações
+- [x] Fase 4: Atualizar a área pública para renderizar dinamicamente textos, títulos, subtítulos, links e identidade salvos no banco
+- [x] Fase 5: Desenvolver o novo painel administrativo completo com abas dedicadas: "Dashboard", "Editar Textos do Site", "Divulgações", "Configurações" e "Zona de Perigo"
+- [x] Fase 6: Executar testes automatizados, validar responsividade e tratar estados de erro e loading
+- [x] Fase 7: Salvar checkpoint final e entregar a aplicação completa atualizada

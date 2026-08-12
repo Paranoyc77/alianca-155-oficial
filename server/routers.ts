@@ -16,7 +16,6 @@ const adminProcedure = publicProcedure.use(({ ctx, next }) => {
     throw new TRPCError({ code: "UNAUTHORIZED", message: "Acesso não autorizado. Faça login no painel." });
   }
 
-  // Parse cookies manually or check header
   const match = cookies.split(";").map(c => c.trim()).find(c => c.startsWith(`${ADMIN_COOKIE}=`));
   if (!match) {
     throw new TRPCError({ code: "UNAUTHORIZED", message: "Sessão administrativa ausente ou expirada." });
@@ -48,6 +47,19 @@ export const appRouter = router({
     list: publicProcedure.query(async () => {
       return await db.getAllDivulgacoes();
     }),
+
+    // Obter todas as configurações globais do site (público)
+    getSettings: publicProcedure.query(async () => {
+      return await db.getAllSiteSettings();
+    }),
+
+    // Atualizar configurações globais do site (requer admin)
+    updateSettings: adminProcedure
+      .input(z.record(z.string(), z.string()))
+      .mutation(async ({ input }) => {
+        await db.updateSiteSettings(input);
+        return { success: true };
+      }),
 
     // Estatísticas para o dashboard admin (requer admin)
     stats: adminProcedure.query(async () => {
