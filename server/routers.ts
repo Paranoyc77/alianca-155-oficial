@@ -53,6 +53,38 @@ export const appRouter = router({
       return await db.getAllSiteSettings();
     }),
 
+    // Enviar inscrição para recrutamento (público)
+    submitRecrutamento: publicProcedure
+      .input(z.object({
+        nome: z.string().min(2, "Nome é obrigatório"),
+        contato: z.string().min(3, "Contato é obrigatório"),
+        experiencia: z.string().min(5, "Informe sua experiência"),
+        motivacao: z.string().min(5, "Informe sua motivação"),
+      }))
+      .mutation(async ({ input }) => {
+        const id = await db.createRecrutamentoInscricao({
+          nome: input.nome,
+          contato: input.contato,
+          experiencia: input.experiencia,
+          motivacao: input.motivacao,
+          status: "pendente",
+        });
+        return { success: true, id };
+      }),
+
+    // Listar inscrições de recrutamento (requer admin)
+    listRecrutamento: adminProcedure.query(async () => {
+      return await db.getAllRecrutamentoInscricoes();
+    }),
+
+    // Excluir inscrição de recrutamento (requer admin)
+    deleteRecrutamento: adminProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        await db.deleteRecrutamentoInscricao(input.id);
+        return { success: true };
+      }),
+
     // Atualizar configurações globais do site (requer admin)
     updateSettings: adminProcedure
       .input(z.record(z.string(), z.string()))
@@ -64,11 +96,13 @@ export const appRouter = router({
     // Estatísticas para o dashboard admin (requer admin)
     stats: adminProcedure.query(async () => {
       const all = await db.getAllDivulgacoes();
+      const inscricoes = await db.getAllRecrutamentoInscricoes();
       const total = all.length;
       const grupos = all.filter(x => x.type === "grupo").length;
       const canais = all.filter(x => x.type === "canal").length;
       const sites = all.filter(x => x.type === "site").length;
-      return { total, grupos, canais, sites };
+      const totalInscricoes = inscricoes.length;
+      return { total, grupos, canais, sites, totalInscricoes };
     }),
 
     // Verificar se sessão admin é válida

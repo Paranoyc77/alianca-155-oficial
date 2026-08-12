@@ -43,6 +43,18 @@ export const appConfig = mysqlTable("app_config", {
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
 
+export const recrutamentoInscricoes = mysqlTable("recrutamento_inscricoes", {
+  id: int("id").autoincrement().primaryKey(),
+  nome: varchar("nome", { length: 255 }).notNull(),
+  contato: varchar("contato", { length: 255 }).notNull(),
+  experiencia: text("experiencia").notNull(),
+  motivacao: text("motivacao").notNull(),
+  status: varchar("status", { length: 50 }).default("pendente").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
 export type Divulgacao = typeof divulgacoes.$inferSelect;
 export type InsertDivulgacao = typeof divulgacoes.$inferInsert;
 export type AppConfig = typeof appConfig.$inferSelect;
+export type RecrutamentoInscricao = typeof recrutamentoInscricoes.$inferSelect;
+export type InsertRecrutamentoInscricao = typeof recrutamentoInscricoes.$inferInsert;

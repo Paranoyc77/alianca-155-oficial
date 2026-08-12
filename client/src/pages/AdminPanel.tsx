@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { trpc } from "@/lib/trpc";
-import { LayoutDashboard, Megaphone, Users, Globe, Settings, LogOut, Plus, Search, ExternalLink, Edit, Trash2, Key, AlertTriangle, X, Loader2, Menu, AlertCircle, FileText, CheckCircle2 } from "lucide-react";
+import { LayoutDashboard, Megaphone, Users, Globe, Settings, LogOut, Plus, Search, ExternalLink, Edit, Trash2, Key, AlertTriangle, X, Loader2, Menu, AlertCircle, FileText, CheckCircle2, Image as ImageIcon, Music, UserCheck } from "lucide-react";
 import { toast } from "sonner";
 
 export default function AdminPanel({ onLogout }: { onLogout: () => void }) {
@@ -15,6 +15,8 @@ export default function AdminPanel({ onLogout }: { onLogout: () => void }) {
 
   // Configurações globais do site state
   const { data: settings = {}, refetch: refetchSettings } = trpc.alianca.getSettings.useQuery();
+  const { data: inscricoes = [], refetch: refetchInscricoes } = trpc.alianca.listRecrutamento.useQuery();
+
   const [siteForm, setSiteForm] = useState({
     site_title: "",
     site_subtitle: "",
@@ -24,6 +26,10 @@ export default function AdminPanel({ onLogout }: { onLogout: () => void }) {
     hero_description: "",
     footer_text: "",
     admin_btn_text: "",
+    site_logo: "",
+    site_bg_image: "",
+    site_music_url: "",
+    site_music_title: "",
   });
 
   useEffect(() => {
@@ -37,6 +43,10 @@ export default function AdminPanel({ onLogout }: { onLogout: () => void }) {
         hero_description: settings.hero_description || "",
         footer_text: settings.footer_text || "",
         admin_btn_text: settings.admin_btn_text || "",
+        site_logo: settings.site_logo || "",
+        site_bg_image: settings.site_bg_image || "",
+        site_music_url: settings.site_music_url || "",
+        site_music_title: settings.site_music_title || "",
       });
     }
   }, [settings]);
@@ -61,8 +71,17 @@ export default function AdminPanel({ onLogout }: { onLogout: () => void }) {
 
   const updateSettingsMutation = trpc.alianca.updateSettings.useMutation({
     onSuccess: () => {
-      toast.success("Conteúdo do site atualizado com sucesso!");
+      toast.success("Configurações atualizadas com sucesso!");
       refetchSettings();
+    },
+    onError: (err) => toast.error(err.message)
+  });
+
+  const deleteRecrutamentoMutation = trpc.alianca.deleteRecrutamento.useMutation({
+    onSuccess: () => {
+      toast.success("Inscrição removida.");
+      refetchInscricoes();
+      utils.alianca.stats.invalidate();
     },
     onError: (err) => toast.error(err.message)
   });
@@ -111,6 +130,7 @@ export default function AdminPanel({ onLogout }: { onLogout: () => void }) {
       toast.success("Todos os dados foram limpos.");
       utils.alianca.list.invalidate();
       utils.alianca.stats.invalidate();
+      refetchInscricoes();
     },
     onError: (err) => toast.error(err.message)
   });
@@ -199,14 +219,17 @@ export default function AdminPanel({ onLogout }: { onLogout: () => void }) {
   };
 
   const handleClearAll = () => {
-    if (window.confirm("⚠️ ATENÇÃO: Deseja realmente excluir TODAS as divulgações cadastradas? Esta ação não pode ser desfeita!")) {
+    if (window.confirm("⚠️ ATENÇÃO: Deseja realmente excluir TODAS as divulgações e inscrições cadastradas? Esta ação não pode ser desfeita!")) {
       clearAllMutation.mutate();
     }
   };
 
   const navTitles: Record<string, string> = {
     dashboard: "Dashboard",
-    editSite: "Editar Conteúdo do Site",
+    editImages: "Gerenciar Imagens do Site",
+    editMusic: "Gerenciar Música do Site",
+    recrutamento: "Inscrições de Recrutamento",
+    editSite: "Editar Textos do Site",
     divulgacoes: "Gerenciar Divulgações",
     grupos: "Grupos",
     canais: "Canais",
@@ -222,12 +245,12 @@ export default function AdminPanel({ onLogout }: { onLogout: () => void }) {
         </div>
         <div>
           <strong className="block text-[15px]">Aliança 155</strong>
-          <small className="text-[#969696] text-[11px]">Painel Admin Global</small>
+          <small className="text-[#969696] text-[11px]">Painel Admin Avançado</small>
         </div>
       </div>
 
       <div className="px-4 py-3 text-[#555] text-[11px] font-bold tracking-wider">PRINCIPAL</div>
-      <nav className="flex-1 px-3 space-y-1">
+      <nav className="flex-1 px-3 space-y-1 overflow-y-auto">
         <button
           onClick={() => { setActiveSection("dashboard"); setMobileMenuOpen(false); }}
           className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-sm transition ${activeSection === "dashboard" ? "bg-[#8b5cf6] text-white" : "text-[#969696] hover:text-white hover:bg-[#171717]"}`}
@@ -235,10 +258,28 @@ export default function AdminPanel({ onLogout }: { onLogout: () => void }) {
           <LayoutDashboard className="w-4 h-4" /> Dashboard
         </button>
         <button
+          onClick={() => { setActiveSection("editImages"); setMobileMenuOpen(false); }}
+          className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-sm transition ${activeSection === "editImages" ? "bg-[#8b5cf6] text-white" : "text-[#969696] hover:text-white hover:bg-[#171717]"}`}
+        >
+          <ImageIcon className="w-4 h-4" /> Imagens do Site
+        </button>
+        <button
+          onClick={() => { setActiveSection("editMusic"); setMobileMenuOpen(false); }}
+          className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-sm transition ${activeSection === "editMusic" ? "bg-[#8b5cf6] text-white" : "text-[#969696] hover:text-white hover:bg-[#171717]"}`}
+        >
+          <Music className="w-4 h-4" /> Música do Site
+        </button>
+        <button
+          onClick={() => { setActiveSection("recrutamento"); setMobileMenuOpen(false); }}
+          className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-sm transition ${activeSection === "recrutamento" ? "bg-[#8b5cf6] text-white" : "text-[#969696] hover:text-white hover:bg-[#171717]"}`}
+        >
+          <UserCheck className="w-4 h-4" /> Recrutamento ({inscricoes.length})
+        </button>
+        <button
           onClick={() => { setActiveSection("editSite"); setMobileMenuOpen(false); }}
           className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-sm transition ${activeSection === "editSite" ? "bg-[#8b5cf6] text-white" : "text-[#969696] hover:text-white hover:bg-[#171717]"}`}
         >
-          <FileText className="w-4 h-4" /> Editar Textos do Site
+          <FileText className="w-4 h-4" /> Textos do Site
         </button>
         <button
           onClick={() => { setActiveSection("divulgacoes"); setMobileMenuOpen(false); }}
@@ -319,7 +360,7 @@ export default function AdminPanel({ onLogout }: { onLogout: () => void }) {
             </button>
             <div>
               <h2 className="text-base md:text-lg font-bold">{navTitles[activeSection] || "Admin"}</h2>
-              <span className="text-xs text-[#969696]">Painel de Edição Global</span>
+              <span className="text-xs text-[#969696]">Painel Administrativo Aliança 155</span>
             </div>
           </div>
 
@@ -367,10 +408,10 @@ export default function AdminPanel({ onLogout }: { onLogout: () => void }) {
                 </div>
                 <div className="p-6 rounded-2xl bg-[#111111] border border-[#292929]">
                   <div className="flex items-center justify-between mb-4">
-                    <span className="text-sm text-[#969696]">Grupos Cadastrados</span>
-                    <Users className="w-5 h-5 text-[#3b82f6]" />
+                    <span className="text-sm text-[#969696]">Inscrições Recrutamento</span>
+                    <UserCheck className="w-5 h-5 text-[#3b82f6]" />
                   </div>
-                  <div className="text-3xl font-black">{stats?.grupos || 0}</div>
+                  <div className="text-3xl font-black">{inscricoes.length}</div>
                 </div>
                 <div className="p-6 rounded-2xl bg-[#111111] border border-[#292929]">
                   <div className="flex items-center justify-between mb-4">
@@ -388,24 +429,219 @@ export default function AdminPanel({ onLogout }: { onLogout: () => void }) {
                 </div>
               </div>
 
-              <div className="mt-8 p-6 rounded-2xl bg-[#111111] border border-[#292929] space-y-4">
-                <h3 className="text-lg font-bold">✨ Atalhos de Edição Global</h3>
-                <p className="text-sm text-[#969696]">Agora você pode alterar todos os textos, títulos, rodapé e identidade do site diretamente pelo painel administrativo.</p>
-                <div className="flex flex-wrap gap-3 pt-2">
+              <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-5">
+                <div className="p-6 rounded-2xl bg-[#111111] border border-[#292929] space-y-3">
+                  <div className="w-10 h-10 rounded-xl bg-[#8b5cf6]/20 flex items-center justify-center text-[#8b5cf6]">
+                    <ImageIcon className="w-5 h-5" />
+                  </div>
+                  <h3 className="text-lg font-bold">Gerenciar Imagens</h3>
+                  <p className="text-xs text-[#969696]">Altere a logo, fundo e imagens globais do site.</p>
                   <button
-                    onClick={() => setActiveSection("editSite")}
-                    className="px-5 py-3 rounded-xl bg-[#8b5cf6] text-white font-bold text-sm transition hover:brightness-110 flex items-center gap-2"
+                    onClick={() => setActiveSection("editImages")}
+                    className="w-full py-2.5 rounded-xl bg-[#1f1f1f] hover:bg-[#8b5cf6] text-white font-bold text-xs transition"
                   >
-                    <FileText className="w-4 h-4" /> Editar Textos do Site
+                    Editar Imagens
                   </button>
+                </div>
+
+                <div className="p-6 rounded-2xl bg-[#111111] border border-[#292929] space-y-3">
+                  <div className="w-10 h-10 rounded-xl bg-[#8b5cf6]/20 flex items-center justify-center text-[#8b5cf6]">
+                    <Music className="w-5 h-5" />
+                  </div>
+                  <h3 className="text-lg font-bold">Música de Fundo</h3>
+                  <p className="text-xs text-[#969696]">Adicione ou altere a trilha sonora do site.</p>
                   <button
-                    onClick={() => setActiveSection("divulgacoes")}
-                    className="px-5 py-3 rounded-xl bg-[#1c1c1c] border border-[#292929] hover:bg-[#252525] text-white font-bold text-sm transition flex items-center gap-2"
+                    onClick={() => setActiveSection("editMusic")}
+                    className="w-full py-2.5 rounded-xl bg-[#1f1f1f] hover:bg-[#8b5cf6] text-white font-bold text-xs transition"
                   >
-                    <Megaphone className="w-4 h-4" /> Gerenciar Divulgações
+                    Configurar Música
+                  </button>
+                </div>
+
+                <div className="p-6 rounded-2xl bg-[#111111] border border-[#292929] space-y-3">
+                  <div className="w-10 h-10 rounded-xl bg-[#8b5cf6]/20 flex items-center justify-center text-[#8b5cf6]">
+                    <UserCheck className="w-5 h-5" />
+                  </div>
+                  <h3 className="text-lg font-bold">Recrutamento</h3>
+                  <p className="text-xs text-[#969696]">Veja os novos membros inscritos pelo site.</p>
+                  <button
+                    onClick={() => setActiveSection("recrutamento")}
+                    className="w-full py-2.5 rounded-xl bg-[#1f1f1f] hover:bg-[#8b5cf6] text-white font-bold text-xs transition"
+                  >
+                    Ver Inscrições ({inscricoes.length})
                   </button>
                 </div>
               </div>
+            </div>
+          )}
+
+          {/* GERENCIAR IMAGENS DO SITE */}
+          {activeSection === "editImages" && (
+            <div className="space-y-6 max-w-2xl">
+              <div>
+                <h1 className="text-2xl md:text-3xl font-extrabold mb-1">Gerenciar Imagens do Site</h1>
+                <p className="text-sm text-[#969696]">Altere as URLs de imagem para o logotipo e plano de fundo (background) do site.</p>
+              </div>
+
+              <form onSubmit={handleSaveSiteSettings} className="p-6 rounded-2xl bg-[#111111] border border-[#292929] space-y-5">
+                <div>
+                  <label className="block text-sm font-medium mb-1.5">URL da Logo (Ícone/Avatar do Topo)</label>
+                  <input
+                    type="text"
+                    value={siteForm.site_logo}
+                    onChange={(e) => setSiteForm({ ...siteForm, site_logo: e.target.value })}
+                    placeholder="https://exemplo.com/logo.png (Deixe vazio para usar o padrão 155)"
+                    className="w-full p-3 bg-[#0d0d0d] text-white border border-[#292929] rounded-xl outline-none focus:border-[#8b5cf6] text-sm"
+                  />
+                  {siteForm.site_logo && (
+                    <div className="mt-2 flex items-center gap-3">
+                      <img src={siteForm.site_logo} alt="Preview Logo" className="w-12 h-12 rounded-xl object-cover border border-[#292929]" />
+                      <span className="text-xs text-[#969696]">Pré-visualização da Logo</span>
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-1.5">URL da Imagem de Fundo (Background)</label>
+                  <input
+                    type="text"
+                    value={siteForm.site_bg_image}
+                    onChange={(e) => setSiteForm({ ...siteForm, site_bg_image: e.target.value })}
+                    placeholder="https://exemplo.com/background.jpg (Opcional)"
+                    className="w-full p-3 bg-[#0d0d0d] text-white border border-[#292929] rounded-xl outline-none focus:border-[#8b5cf6] text-sm"
+                  />
+                  {siteForm.site_bg_image && (
+                    <div className="mt-2 flex items-center gap-3">
+                      <img src={siteForm.site_bg_image} alt="Preview BG" className="w-24 h-12 rounded-xl object-cover border border-[#292929]" />
+                      <span className="text-xs text-[#969696]">Pré-visualização do Fundo</span>
+                    </div>
+                  )}
+                </div>
+
+                <div className="pt-4 flex justify-end">
+                  <button
+                    type="submit"
+                    disabled={updateSettingsMutation.isPending}
+                    className="py-3 px-6 rounded-xl bg-gradient-to-br from-[#8b5cf6] to-[#5b21b6] text-white font-bold text-sm transition hover:brightness-110 flex items-center gap-2"
+                  >
+                    {updateSettingsMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />} Salvar Imagens
+                  </button>
+                </div>
+              </form>
+            </div>
+          )}
+
+          {/* GERENCIAR MÚSICA DO SITE */}
+          {activeSection === "editMusic" && (
+            <div className="space-y-6 max-w-2xl">
+              <div>
+                <h1 className="text-2xl md:text-3xl font-extrabold mb-1">Música de Fundo do Site</h1>
+                <p className="text-sm text-[#969696]">Adicione um link direto de áudio (MP3, WAV) para tocar como trilha sonora na página pública.</p>
+              </div>
+
+              <form onSubmit={handleSaveSiteSettings} className="p-6 rounded-2xl bg-[#111111] border border-[#292929] space-y-5">
+                <div>
+                  <label className="block text-sm font-medium mb-1.5">Título da Música</label>
+                  <input
+                    type="text"
+                    value={siteForm.site_music_title}
+                    onChange={(e) => setSiteForm({ ...siteForm, site_music_title: e.target.value })}
+                    placeholder="Ex: Trilha Sonora Oficial Aliança"
+                    className="w-full p-3 bg-[#0d0d0d] text-white border border-[#292929] rounded-xl outline-none focus:border-[#8b5cf6] text-sm"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-1.5">URL do Arquivo de Áudio (.mp3 / .wav)</label>
+                  <input
+                    type="text"
+                    value={siteForm.site_music_url}
+                    onChange={(e) => setSiteForm({ ...siteForm, site_music_url: e.target.value })}
+                    placeholder="https://exemplo.com/musica.mp3"
+                    className="w-full p-3 bg-[#0d0d0d] text-white border border-[#292929] rounded-xl outline-none focus:border-[#8b5cf6] text-sm"
+                  />
+                </div>
+
+                {siteForm.site_music_url && (
+                  <div className="p-4 rounded-xl bg-[#0d0d0d] border border-[#292929] space-y-2">
+                    <span className="text-xs font-bold text-[#bca9ff]">Teste de Reprodução:</span>
+                    <audio controls src={siteForm.site_music_url} className="w-full h-10 accent-[#8b5cf6]" />
+                  </div>
+                )}
+
+                <div className="pt-4 flex justify-end">
+                  <button
+                    type="submit"
+                    disabled={updateSettingsMutation.isPending}
+                    className="py-3 px-6 rounded-xl bg-gradient-to-br from-[#8b5cf6] to-[#5b21b6] text-white font-bold text-sm transition hover:brightness-110 flex items-center gap-2"
+                  >
+                    {updateSettingsMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Music className="w-4 h-4" />} Salvar Música do Site
+                  </button>
+                </div>
+              </form>
+            </div>
+          )}
+
+          {/* RECRUTAMENTO (INSCRITOS) */}
+          {activeSection === "recrutamento" && (
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h1 className="text-2xl md:text-3xl font-extrabold mb-1">Inscrições de Recrutamento</h1>
+                  <p className="text-sm text-[#969696]">Candidatos que se inscreveram para entrar na comunidade através do site.</p>
+                </div>
+                <span className="px-3 py-1.5 rounded-full bg-[#8b5cf6]/20 text-[#bca9ff] text-xs font-bold">
+                  {inscricoes.length} Candidatos
+                </span>
+              </div>
+
+              {inscricoes.length === 0 ? (
+                <div className="text-center py-20 bg-[#111111] border border-[#292929] rounded-2xl p-8">
+                  <UserCheck className="w-12 h-12 mx-auto mb-3 text-[#555]" />
+                  <h3 className="text-lg font-bold mb-1">Nenhuma inscrição recebida ainda</h3>
+                  <p className="text-sm text-[#969696]">Assim que novos membros preencherem o formulário na aba de recrutamento do site, eles aparecerão aqui.</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {inscricoes.map((item) => (
+                    <div key={item.id} className="p-6 rounded-2xl bg-[#111111] border border-[#292929] space-y-3">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#222] pb-3">
+                        <div>
+                          <h3 className="text-lg font-bold text-white">{item.nome}</h3>
+                          <span className="text-xs text-[#8b5cf6] font-medium">Contato: {item.contato}</span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <span className="px-3 py-1 rounded-full bg-[#3b82f6]/20 text-[#60a5fa] text-xs font-bold uppercase">
+                            {item.status}
+                          </span>
+                          <button
+                            onClick={() => {
+                              if (window.confirm(`Deseja excluir a inscrição de ${item.nome}?`)) {
+                                deleteRecrutamentoMutation.mutate({ id: item.id });
+                              }
+                            }}
+                            className="p-2 rounded-xl bg-[#ef4444]/20 text-[#f87171] hover:bg-[#ef4444]/30 transition"
+                            title="Excluir Inscrição"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                        <div className="p-4 rounded-xl bg-[#0d0d0d] border border-[#222]">
+                          <strong className="block text-xs text-[#969696] mb-1 uppercase tracking-wider">Experiência</strong>
+                          <p className="text-white whitespace-pre-wrap">{item.experiencia}</p>
+                        </div>
+                        <div className="p-4 rounded-xl bg-[#0d0d0d] border border-[#222]">
+                          <strong className="block text-xs text-[#969696] mb-1 uppercase tracking-wider">Motivação</strong>
+                          <p className="text-white whitespace-pre-wrap">{item.motivacao}</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
@@ -413,7 +649,7 @@ export default function AdminPanel({ onLogout }: { onLogout: () => void }) {
           {activeSection === "editSite" && (
             <div className="space-y-6 max-w-3xl">
               <div>
-                <h1 className="text-2xl md:text-3xl font-extrabold mb-1">Editor de Conteúdo do Site</h1>
+                <h1 className="text-2xl md:text-3xl font-extrabold mb-1">Editor de Textos do Site</h1>
                 <p className="text-sm text-[#969696]">Altere todos os títulos, subtítulos, selos e rodapé exibidos na página pública em tempo real.</p>
               </div>
 
@@ -506,7 +742,7 @@ export default function AdminPanel({ onLogout }: { onLogout: () => void }) {
                     disabled={updateSettingsMutation.isPending}
                     className="py-3 px-6 rounded-xl bg-gradient-to-br from-[#8b5cf6] to-[#5b21b6] text-white font-bold text-sm transition hover:brightness-110 flex items-center gap-2"
                   >
-                    {updateSettingsMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />} Salvar Alterações do Site
+                    {updateSettingsMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />} Salvar Textos do Site
                   </button>
                 </div>
               </form>
@@ -669,7 +905,7 @@ export default function AdminPanel({ onLogout }: { onLogout: () => void }) {
 
               <div className="p-6 rounded-2xl bg-[#111111] border border-[#ef4444]/40 space-y-4">
                 <h3 className="text-lg font-bold text-[#ef4444] flex items-center gap-2">⚠️ Zona de Perigo</h3>
-                <p className="text-sm text-[#969696]">Apagar permanentemente todas as divulgações cadastradas no banco de dados.</p>
+                <p className="text-sm text-[#969696]">Apagar permanentemente todas as divulgações e inscrições cadastradas no banco de dados.</p>
                 <button
                   onClick={handleClearAll}
                   disabled={clearAllMutation.isPending}

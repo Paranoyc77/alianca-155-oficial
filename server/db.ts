@@ -1,6 +1,6 @@
 import { eq, desc, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, divulgacoes, appConfig, Divulgacao, InsertDivulgacao } from "../drizzle/schema";
+import { InsertUser, users, divulgacoes, appConfig, recrutamentoInscricoes, Divulgacao, InsertDivulgacao, RecrutamentoInscricao, InsertRecrutamentoInscricao } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -125,6 +125,29 @@ export async function deleteDivulgacao(id: number): Promise<void> {
   await db.delete(divulgacoes).where(eq(divulgacoes.id, id));
 }
 
+// ==========================================
+// Recrutamento Database Helpers
+// ==========================================
+
+export async function createRecrutamentoInscricao(data: InsertRecrutamentoInscricao): Promise<number> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const res = await db.insert(recrutamentoInscricoes).values(data);
+  return Number(res[0].insertId);
+}
+
+export async function getAllRecrutamentoInscricoes(): Promise<RecrutamentoInscricao[]> {
+  const db = await getDb();
+  if (!db) return [];
+  return await db.select().from(recrutamentoInscricoes).orderBy(desc(recrutamentoInscricoes.id));
+}
+
+export async function deleteRecrutamentoInscricao(id: number): Promise<void> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.delete(recrutamentoInscricoes).where(eq(recrutamentoInscricoes.id, id));
+}
+
 export async function getConfigValue(key: string, defaultValue: string): Promise<string> {
   const db = await getDb();
   if (!db) return defaultValue;
@@ -141,7 +164,6 @@ export async function setConfigValue(key: string, value: string): Promise<void> 
   await db.insert(appConfig).values({ key, value }).onDuplicateKeyUpdate({ set: { value } });
 }
 
-// Obter todas as configurações globais em formato de objeto
 export async function getAllSiteSettings(): Promise<Record<string, string>> {
   const db = await getDb();
   const defaults = {
@@ -153,6 +175,10 @@ export async function getAllSiteSettings(): Promise<Record<string, string>> {
     hero_description: "Encontre os melhores grupos, canais e sites recomendados pela nossa comunidade.",
     footer_text: "Aliança 155 — Todos os direitos reservados.",
     admin_btn_text: "Painel Admin",
+    site_logo: "",
+    site_bg_image: "",
+    site_music_url: "",
+    site_music_title: "Trilha Sonora Oficial",
   };
 
   if (!db) return defaults;
@@ -182,4 +208,5 @@ export async function clearAllData(): Promise<void> {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   await db.delete(divulgacoes);
+  await db.delete(recrutamentoInscricoes);
 }
