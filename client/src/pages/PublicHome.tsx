@@ -93,7 +93,35 @@ export default function PublicHome() {
     };
   }, [divulgacoes, equipe]);
 
+  // Helper para extrair ID do YouTube e gerar link de embed ou iframe
+  const getYouTubeEmbedUrl = (url: string) => {
+    if (!url) return null;
+    let videoId = "";
+    if (url.includes("youtu.be/")) {
+      videoId = url.split("youtu.be/")[1]?.split("?")[0];
+    } else if (url.includes("youtube.com/watch")) {
+      const urlParams = new URLSearchParams(url.split("?")[1]);
+      videoId = urlParams.get("v") || "";
+    } else if (url.includes("youtube.com/embed/")) {
+      videoId = url.split("youtube.com/embed/")[1]?.split("?")[0];
+    } else if (url.includes("youtube.com/shorts/")) {
+      videoId = url.split("youtube.com/shorts/")[1]?.split("?")[0];
+    }
+    if (videoId) {
+      return `https://www.youtube.com/embed/${videoId}?autoplay=1&loop=1&playlist=${videoId}`;
+    }
+    return null;
+  };
+
+  const youtubeEmbed = useMemo(() => {
+    return settings.site_music_url ? getYouTubeEmbedUrl(settings.site_music_url) : null;
+  }, [settings.site_music_url]);
+
   const toggleMusic = () => {
+    if (youtubeEmbed) {
+      setIsPlaying(!isPlaying);
+      return;
+    }
     if (!audioRef.current || !settings.site_music_url) return;
     if (isPlaying) {
       audioRef.current.pause();
@@ -121,9 +149,25 @@ export default function PublicHome() {
       className="min-h-screen text-white flex flex-col font-sans selection:bg-[#8b5cf6] selection:text-white relative bg-[#050505]"
       style={settings.site_bg_image ? { backgroundImage: `linear-gradient(to bottom, rgba(5,5,5,0.9), rgba(5,5,5,0.95)), url(${settings.site_bg_image})`, backgroundSize: "cover", backgroundPosition: "center" } : {}}
     >
-      {/* Hidden audio element */}
-      {settings.site_music_url && (
+      {/* Hidden audio element for direct MP3 */}
+      {settings.site_music_url && !youtubeEmbed && (
         <audio ref={audioRef} src={settings.site_music_url} loop preload="none" />
+      )}
+
+      {/* Hidden or active YouTube iframe when playing */}
+      {youtubeEmbed && isPlaying && (
+        <div className="fixed bottom-4 right-4 z-50 w-72 h-40 bg-[#111] border border-[#333] rounded-2xl overflow-hidden shadow-2xl flex flex-col">
+          <div className="bg-[#1f1f1f] px-3 py-1.5 flex items-center justify-between text-xs font-bold text-[#bca9ff]">
+            <span>🎵 {settings.site_music_title || "Trilha Sonora"}</span>
+            <button onClick={() => setIsPlaying(false)} className="text-gray-400 hover:text-white">✕</button>
+          </div>
+          <iframe
+            src={youtubeEmbed}
+            className="w-full flex-1"
+            allow="autoplay"
+            title="Trilha Sonora YouTube"
+          ></iframe>
+        </div>
       )}
 
       {/* Navbar */}

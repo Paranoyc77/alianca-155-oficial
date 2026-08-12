@@ -1,8 +1,7 @@
-# Aliança 155 - Métricas de Visitas e Online
+# Aliança 155 - Correção do Player de Música (YouTube)
 
-- [x] Fase 1: Definir o modelo de métricas e sessões online ativas
-- [x] Fase 2: Expandir o schema Drizzle com tabelas `site_visitas` e `usuarios_online`
-- [x] Fase 3: Implementar endpoints tRPC públicos (registrar visita, heartbeat online) e protegidos (estatísticas de tráfego)
-- [x] Fase 4: Integrar pings automáticos de heartbeat na página pública e cards de métricas no painel admin
-- [x] Fase 5: Testar contagem de visitantes únicos/totais, expiração de usuários inativos e responsividade
-- [x] Fase 6: Salvar checkpoint final e entregar o recurso de métricas em tempo real
+- [x] Fase 1: Localizar o fluxo atual de configuração e reprodução de música
+- [ ] Fase 2: Implementar conversão de links do YouTube (watch, youtu.be, shorts, embed) para iframe/audio incorporado
+- [ ] Fase 3: Atualizar o painel admin para orientar o usuário sobre links do YouTube
+- [ ] Fase 4: Atualizar a página pública para renderizar o player do YouTube de forma fluida e estilizada
+- [ ] Fase 5: Salvar checkpoint final e entregar a correção
