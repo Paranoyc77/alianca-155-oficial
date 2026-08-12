@@ -1,0 +1,585 @@
+import { useState, useMemo } from "react";
+import { trpc } from "@/lib/trpc";
+import { LayoutDashboard, Megaphone, Users, Globe, Settings, LogOut, Plus, Search, ExternalLink, Edit, Trash2, Key, AlertTriangle, ShieldAlert, X, Check, Loader2 } from "lucide-react";
+import { toast } from "sonner";
+
+export default function AdminPanel({ onLogout }: { onLogout: () => void }) {
+  const [activeSection, setActiveSection] = useState("dashboard");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filterType, setFilterType] = useState("all");
+
+  // Modal State
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState<{ id?: number; title: string; description: string; type: "grupo" | "canal" | "site"; link: string; image: string } | null>(null);
+
+  // Password change state
+  const [oldPassword, setOldPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+
+  const utils = trpc.useUtils();
+  const { data: stats, isLoading: statsLoading } = trpc.alianca.stats.useQuery();
+  const { data: divulgacoes = [], isLoading: listLoading } = trpc.alianca.list.useQuery();
+
+  const createMutation = trpc.alianca.create.useMutation({
+    onSuccess: () => {
+      toast.success("Divulgação criada com sucesso!");
+      utils.alianca.list.invalidate();
+      utils.alianca.stats.invalidate();
+      closeModal();
+    },
+    onError: (err) => toast.error(err.message)
+  });
+
+  const updateMutation = trpc.alianca.update.useMutation({
+    onSuccess: () => {
+      toast.success("Divulgação atualizada com sucesso!");
+      utils.alianca.list.invalidate();
+      utils.alianca.stats.invalidate();
+      closeModal();
+    },
+    onError: (err) => toast.error(err.message)
+  });
+
+  const deleteMutation = trpc.alianca.delete.useMutation({
+    onSuccess: () => {
+      toast.success("Divulgação excluída.");
+      utils.alianca.list.invalidate();
+      utils.alianca.stats.invalidate();
+    },
+    onError: (err) => toast.error(err.message)
+  });
+
+  const changePasswordMutation = trpc.alianca.changePassword.useMutation({
+    onSuccess: () => {
+      toast.success("Senha alterada com sucesso!");
+      setOldPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+    },
+    onError: (err) => toast.error(err.message)
+  });
+
+  const clearAllMutation = trpc.alianca.clearAll.useMutation({
+    onSuccess: () => {
+      toast.success("Todos os dados foram limpos.");
+      utils.alianca.list.invalidate();
+      utils.alianca.stats.invalidate();
+    },
+    onError: (err) => toast.error(err.message)
+  });
+
+  const filteredDivulgacoes = useMemo(() => {
+    return divulgacoes.filter(item => {
+      const matchesSearch = searchQuery === "" ||
+        item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (item.description && item.description.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        item.link.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesType = filterType === "all" || item.type === filterType;
+      return matchesSearch && matchesType;
+    });
+  }, [divulgacoes, searchQuery, filterType]);
+
+  const openCreateModal = () => {
+    setEditingItem({ title: "", description: "", type: "grupo", link: "", image: "" });
+    setIsModalOpen(true);
+  };
+
+  const openEditModal = (item: any) => {
+    setEditingItem({
+      id: item.id,
+      title: item.title,
+      description: item.description || "",
+      type: item.type,
+      link: item.link,
+      image: item.image || ""
+    });
+    setIsModalOpen(true);
+  };
+
+  const closeModal = () => {
+    setIsModalOpen(false);
+    setEditingItem(null);
+  };
+
+  const handleSaveItem = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingItem) return;
+    if (!editingItem.title || !editingItem.link) {
+      toast.error("Preencha o título e o link.");
+      return;
+    }
+
+    if (editingItem.id) {
+      updateMutation.mutate({
+        id: editingItem.id,
+        title: editingItem.title,
+        description: editingItem.description,
+        type: editingItem.type,
+        link: editingItem.link,
+        image: editingItem.image,
+      });
+    } else {
+      createMutation.mutate({
+        title: editingItem.title,
+        description: editingItem.description,
+        type: editingItem.type,
+        link: editingItem.link,
+        image: editingItem.image,
+      });
+    }
+  };
+
+  const handlePasswordChange = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!oldPassword || !newPassword || !confirmPassword) {
+      toast.error("Preencha todos os campos de senha.");
+      return;
+    }
+    if (newPassword.length < 6) {
+      toast.error("A nova senha precisa ter pelo menos 6 caracteres.");
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      toast.error("As novas senhas não coincidem.");
+      return;
+    }
+    changePasswordMutation.mutate({ oldPassword, newPassword });
+  };
+
+  const handleClearAll = () => {
+    if (window.confirm("⚠️ ATENÇÃO: Deseja realmente excluir TODAS as divulgações cadastradas? Esta ação não pode ser desfeita!")) {
+      clearAllMutation.mutate();
+    }
+  };
+
+  const navTitles: Record<string, string> = {
+    dashboard: "Dashboard",
+    divulgacoes: "Gerenciar Divulgações",
+    grupos: "Grupos",
+    canais: "Canais",
+    sites: "Sites",
+    config: "Configurações"
+  };
+
+  return (
+    <div className="min-h-screen flex bg-[#050505] text-white">
+      {/* Sidebar */}
+      <aside className="w-[255px] bg-[#0d0d0d] border-r border-[#292929] fixed h-full flex flex-col z-40 hidden md:flex">
+        <div className="p-6 flex items-center gap-3 border-b border-[#292929]">
+          <div className="w-[42px] h-[42px] rounded-[12px] bg-gradient-to-br from-[#8b5cf6] to-[#5b21b6] flex items-center justify-center font-black text-white">
+            155
+          </div>
+          <div>
+            <strong className="block text-[15px]">Aliança 155</strong>
+            <small className="text-[#969696] text-[11px]">Painel Admin</small>
+          </div>
+        </div>
+
+        <div className="px-4 py-3 text-[#555] text-[11px] font-bold tracking-wider">PRINCIPAL</div>
+        <nav className="flex-1 px-3 space-y-1">
+          <button
+            onClick={() => setActiveSection("dashboard")}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-sm transition ${activeSection === "dashboard" ? "bg-[#8b5cf6] text-white" : "text-[#969696] hover:text-white hover:bg-[#171717]"}`}
+          >
+            <LayoutDashboard className="w-4 h-4" /> Dashboard
+          </button>
+          <button
+            onClick={() => setActiveSection("divulgacoes")}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-sm transition ${activeSection === "divulgacoes" ? "bg-[#8b5cf6] text-white" : "text-[#969696] hover:text-white hover:bg-[#171717]"}`}
+          >
+            <Megaphone className="w-4 h-4" /> Divulgações
+          </button>
+          <button
+            onClick={() => setActiveSection("grupos")}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-sm transition ${activeSection === "grupos" ? "bg-[#8b5cf6] text-white" : "text-[#969696] hover:text-white hover:bg-[#171717]"}`}
+          >
+            <Users className="w-4 h-4" /> Grupos
+          </button>
+          <button
+            onClick={() => setActiveSection("canais")}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-sm transition ${activeSection === "canais" ? "bg-[#8b5cf6] text-white" : "text-[#969696] hover:text-white hover:bg-[#171717]"}`}
+          >
+            <Megaphone className="w-4 h-4" /> Canais
+          </button>
+          <button
+            onClick={() => setActiveSection("sites")}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-sm transition ${activeSection === "sites" ? "bg-[#8b5cf6] text-white" : "text-[#969696] hover:text-white hover:bg-[#171717]"}`}
+          >
+            <Globe className="w-4 h-4" /> Sites
+          </button>
+        </nav>
+
+        <div className="h-[1px] bg-[#292929] my-2"></div>
+
+        <div className="px-4 py-3 text-[#555] text-[11px] font-bold tracking-wider">SISTEMA</div>
+        <div className="px-3 pb-6 space-y-1">
+          <button
+            onClick={() => setActiveSection("config")}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-sm transition ${activeSection === "config" ? "bg-[#8b5cf6] text-white" : "text-[#969696] hover:text-white hover:bg-[#171717]"}`}
+          >
+            <Settings className="w-4 h-4" /> Configurações
+          </button>
+          <button
+            onClick={() => {
+              sessionStorage.removeItem("alianca155_admin");
+              onLogout();
+            }}
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-sm text-[#ef4444] hover:bg-[#ef4444]/10 transition"
+          >
+            <LogOut className="w-4 h-4" /> Sair
+          </button>
+        </div>
+      </aside>
+
+      {/* Main Content Area */}
+      <main className="flex-1 md:ml-[255px] flex flex-col min-h-screen">
+        {/* Header */}
+        <header className="h-[78px] px-8 flex items-center justify-between border-b border-[#292929] bg-[#050505]/88 backdrop-blur sticky top-0 z-30">
+          <div>
+            <h2 className="text-lg font-bold">{navTitles[activeSection] || "Admin"}</h2>
+            <span className="text-xs text-[#969696]">Gerenciamento Aliança 155</span>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <a
+              href="/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-4 py-2 rounded-xl bg-[#171717] border border-[#292929] text-xs font-bold hover:bg-[#222] transition flex items-center gap-2"
+            >
+              Ver site público <ExternalLink className="w-3.5 h-3.5" />
+            </a>
+            <button
+              onClick={openCreateModal}
+              className="px-4 py-2 rounded-xl bg-gradient-to-br from-[#8b5cf6] to-[#5b21b6] text-white text-xs font-bold transition hover:brightness-110 flex items-center gap-2 shadow-[0_4px_15px_rgba(139,92,246,.2)]"
+            >
+              <Plus className="w-4 h-4" /> Nova Divulgação
+            </button>
+          </div>
+        </header>
+
+        {/* Content Body */}
+        <div className="p-8 flex-1">
+          {/* DASHBOARD */}
+          {activeSection === "dashboard" && (
+            <div className="space-y-6">
+              <h1 className="text-3xl font-extrabold">Visão Geral</h1>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+                <div className="p-6 rounded-2xl bg-[#111111] border border-[#292929]">
+                  <div className="flex items-center justify-between mb-4">
+                    <span className="text-sm text-[#969696]">Total de Divulgações</span>
+                    <Megaphone className="w-5 h-5 text-[#8b5cf6]" />
+                  </div>
+                  <div className="text-3xl font-black">{stats?.total || 0}</div>
+                </div>
+                <div className="p-6 rounded-2xl bg-[#111111] border border-[#292929]">
+                  <div className="flex items-center justify-between mb-4">
+                    <span className="text-sm text-[#969696]">Grupos Cadastrados</span>
+                    <Users className="w-5 h-5 text-[#3b82f6]" />
+                  </div>
+                  <div className="text-3xl font-black">{stats?.grupos || 0}</div>
+                </div>
+                <div className="p-6 rounded-2xl bg-[#111111] border border-[#292929]">
+                  <div className="flex items-center justify-between mb-4">
+                    <span className="text-sm text-[#969696]">Canais Cadastrados</span>
+                    <Megaphone className="w-5 h-5 text-[#22c55e]" />
+                  </div>
+                  <div className="text-3xl font-black">{stats?.canais || 0}</div>
+                </div>
+                <div className="p-6 rounded-2xl bg-[#111111] border border-[#292929]">
+                  <div className="flex items-center justify-between mb-4">
+                    <span className="text-sm text-[#969696]">Sites Cadastrados</span>
+                    <Globe className="w-5 h-5 text-[#f59e0b]" />
+                  </div>
+                  <div className="text-3xl font-black">{stats?.sites || 0}</div>
+                </div>
+              </div>
+
+              <div className="mt-8 p-6 rounded-2xl bg-[#111111] border border-[#292929]">
+                <h3 className="text-lg font-bold mb-4">Últimas Divulgações Cadastradas</h3>
+                {divulgacoes.length === 0 ? (
+                  <p className="text-[#969696] text-sm">Nenhuma divulgação cadastrada ainda.</p>
+                ) : (
+                  <div className="space-y-3">
+                    {divulgacoes.slice(0, 5).map(item => (
+                      <div key={item.id} className="flex items-center justify-between p-3 rounded-xl bg-[#0d0d0d] border border-[#292929]">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-lg bg-[#222] flex items-center justify-center font-bold text-xs">
+                            {item.title.substring(0, 2).toUpperCase()}
+                          </div>
+                          <div>
+                            <div className="font-bold text-sm">{item.title}</div>
+                            <span className="text-xs text-[#969696] uppercase">{item.type}</span>
+                          </div>
+                        </div>
+                        <a href={item.link} target="_blank" rel="noopener noreferrer" className="text-xs text-[#8b5cf6] hover:underline flex items-center gap-1">
+                          Acessar <ExternalLink className="w-3 h-3" />
+                        </a>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* DIVULGACOES / GRUPOS / CANAIS / SITES */}
+          {(activeSection === "divulgacoes" || activeSection === "grupos" || activeSection === "canais" || activeSection === "sites") && (
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <h1 className="text-3xl font-extrabold capitalize">
+                  {activeSection === "divulgacoes" ? "Gerenciar Divulgações" : activeSection}
+                </h1>
+                <button
+                  onClick={openCreateModal}
+                  className="px-4 py-2.5 rounded-xl bg-gradient-to-br from-[#8b5cf6] to-[#5b21b6] text-white text-sm font-bold transition hover:brightness-110 flex items-center gap-2"
+                >
+                  <Plus className="w-4 h-4" /> Nova Divulgação
+                </button>
+              </div>
+
+              <div className="p-6 rounded-2xl bg-[#111111] border border-[#292929] space-y-5">
+                <div className="grid grid-cols-1 md:grid-cols-[1fr_200px] gap-4">
+                  <div className="relative">
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#969696]" />
+                    <input
+                      type="text"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      placeholder="🔎 Pesquisar..."
+                      className="w-full pl-11 pr-4 py-2.5 bg-[#0d0d0d] text-white border border-[#292929] rounded-xl outline-none focus:border-[#8b5cf6] text-sm"
+                    />
+                  </div>
+                  {activeSection === "divulgacoes" && (
+                    <select
+                      value={filterType}
+                      onChange={(e) => setFilterType(e.target.value)}
+                      className="w-full p-2.5 bg-[#0d0d0d] text-white border border-[#292929] rounded-xl outline-none focus:border-[#8b5cf6] text-sm"
+                    >
+                      <option value="all">Todos os tipos</option>
+                      <option value="grupo">Grupos</option>
+                      <option value="canal">Canais</option>
+                      <option value="site">Sites</option>
+                    </select>
+                  )}
+                </div>
+
+                {listLoading ? (
+                  <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-[#8b5cf6]" /></div>
+                ) : (
+                  <div className="space-y-3">
+                    {filteredDivulgacoes
+                      .filter(item => activeSection === "divulgacoes" || item.type === (activeSection === "grupos" ? "grupo" : activeSection === "canais" ? "canal" : "site"))
+                      .map(item => (
+                        <div key={item.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-xl bg-[#0d0d0d] border border-[#292929] gap-4">
+                          <div className="flex items-center gap-4">
+                            {item.image ? (
+                              <img src={item.image} alt="" className="w-14 h-14 rounded-xl object-cover" />
+                            ) : (
+                              <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-[#8b5cf6] to-[#5b21b6] flex items-center justify-center font-bold text-sm">
+                                155
+                              </div>
+                            )}
+                            <div>
+                              <div className="flex items-center gap-2 mb-1">
+                                <h3 className="font-bold text-base">{item.title}</h3>
+                                <span className="px-2 py-0.5 rounded-full bg-[#8b5cf6]/20 text-[#bca9ff] text-[10px] font-bold uppercase">
+                                  {item.type}
+                                </span>
+                              </div>
+                              <p className="text-[#969696] text-xs line-clamp-1">{item.description || "Sem descrição"}</p>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-2 self-end sm:self-center">
+                            <a
+                              href={item.link}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="px-3 py-2 rounded-xl bg-[#171717] hover:bg-[#222] text-xs font-bold transition flex items-center gap-1.5"
+                            >
+                              Link <ExternalLink className="w-3.5 h-3.5" />
+                            </a>
+                            <button
+                              onClick={() => openEditModal(item)}
+                              className="px-3 py-2 rounded-xl bg-[#8b5cf6]/20 hover:bg-[#8b5cf6]/30 text-[#bca9ff] text-xs font-bold transition flex items-center gap-1.5"
+                            >
+                              <Edit className="w-3.5 h-3.5" /> Editar
+                            </button>
+                            <button
+                              onClick={() => {
+                                if (window.confirm("Deseja excluir esta divulgação?")) {
+                                  deleteMutation.mutate({ id: item.id });
+                                }
+                              }}
+                              className="px-3 py-2 rounded-xl bg-[#ef4444]/20 hover:bg-[#ef4444]/30 text-[#f87171] text-xs font-bold transition flex items-center gap-1.5"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" /> Excluir
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* CONFIGURAÇÕES */}
+          {activeSection === "config" && (
+            <div className="space-y-6 max-w-2xl">
+              <h1 className="text-3xl font-extrabold">Configurações do Sistema</h1>
+
+              <div className="p-6 rounded-2xl bg-[#111111] border border-[#292929] space-y-4">
+                <h3 className="text-lg font-bold flex items-center gap-2">🔐 Alterar Senha do Admin</h3>
+                <form onSubmit={handlePasswordChange} className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-1.5">Senha atual</label>
+                    <input
+                      type="password"
+                      value={oldPassword}
+                      onChange={(e) => setOldPassword(e.target.value)}
+                      placeholder="Digite a senha atual"
+                      className="w-full p-3 bg-[#0d0d0d] text-white border border-[#292929] rounded-xl outline-none focus:border-[#8b5cf6] text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1.5">Nova senha (mínimo 6 caracteres)</label>
+                    <input
+                      type="password"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      placeholder="Digite a nova senha"
+                      className="w-full p-3 bg-[#0d0d0d] text-white border border-[#292929] rounded-xl outline-none focus:border-[#8b5cf6] text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1.5">Confirmar nova senha</label>
+                    <input
+                      type="password"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      placeholder="Confirme a nova senha"
+                      className="w-full p-3 bg-[#0d0d0d] text-white border border-[#292929] rounded-xl outline-none focus:border-[#8b5cf6] text-sm"
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    disabled={changePasswordMutation.isPending}
+                    className="py-3 px-6 rounded-xl bg-gradient-to-br from-[#8b5cf6] to-[#5b21b6] text-white font-bold text-sm transition hover:brightness-110 flex items-center gap-2"
+                  >
+                    {changePasswordMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Key className="w-4 h-4" />} Alterar Senha
+                  </button>
+                </form>
+              </div>
+
+              <div className="p-6 rounded-2xl bg-[#111111] border border-[#ef4444]/40 space-y-4">
+                <h3 className="text-lg font-bold text-[#ef4444] flex items-center gap-2">⚠️ Zona de Perigo</h3>
+                <p className="text-sm text-[#969696]">Apagar permanentemente todas as divulgações cadastradas no banco de dados.</p>
+                <button
+                  onClick={handleClearAll}
+                  disabled={clearAllMutation.isPending}
+                  className="py-3 px-6 rounded-xl bg-[#ef4444] text-white font-bold text-sm transition hover:brightness-110 flex items-center gap-2"
+                >
+                  {clearAllMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <AlertTriangle className="w-4 h-4" />} Limpar Todos os Dados
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </main>
+
+      {/* Modal CRUD */}
+      {isModalOpen && editingItem && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="w-full max-w-lg bg-[#111111] border border-[#292929] rounded-2xl p-6 relative">
+            <button onClick={closeModal} className="absolute top-5 right-5 text-[#969696] hover:text-white">
+              <X className="w-5 h-5" />
+            </button>
+            <h2 className="text-xl font-bold mb-6">{editingItem.id ? "Editar Divulgação" : "Nova Divulgação"}</h2>
+
+            <form onSubmit={handleSaveItem} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">Título *</label>
+                <input
+                  type="text"
+                  value={editingItem.title}
+                  onChange={(e) => setEditingItem({ ...editingItem, title: e.target.value })}
+                  placeholder="Ex: Grupo Oficial Aliança"
+                  className="w-full p-3 bg-[#0d0d0d] text-white border border-[#292929] rounded-xl outline-none focus:border-[#8b5cf6] text-sm"
+                  required
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1">Categoria (Tipo) *</label>
+                  <select
+                    value={editingItem.type}
+                    onChange={(e: any) => setEditingItem({ ...editingItem, type: e.target.value })}
+                    className="w-full p-3 bg-[#0d0d0d] text-white border border-[#292929] rounded-xl outline-none focus:border-[#8b5cf6] text-sm"
+                  >
+                    <option value="grupo">Grupo</option>
+                    <option value="canal">Canal</option>
+                    <option value="site">Site</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Link de Acesso *</label>
+                  <input
+                    type="text"
+                    value={editingItem.link}
+                    onChange={(e) => setEditingItem({ ...editingItem, link: e.target.value })}
+                    placeholder="https://t.me/seulink"
+                    className="w-full p-3 bg-[#0d0d0d] text-white border border-[#292929] rounded-xl outline-none focus:border-[#8b5cf6] text-sm"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-1">URL da Imagem (Opcional)</label>
+                <input
+                  type="text"
+                  value={editingItem.image}
+                  onChange={(e) => setEditingItem({ ...editingItem, image: e.target.value })}
+                  placeholder="https://exemplo.com/imagem.jpg"
+                  className="w-full p-3 bg-[#0d0d0d] text-white border border-[#292929] rounded-xl outline-none focus:border-[#8b5cf6] text-sm"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-1">Descrição</label>
+                <textarea
+                  value={editingItem.description}
+                  onChange={(e) => setEditingItem({ ...editingItem, description: e.target.value })}
+                  placeholder="Descrição breve da divulgação..."
+                  className="w-full p-3 bg-[#0d0d0d] text-white border border-[#292929] rounded-xl outline-none focus:border-[#8b5cf6] text-sm min-h-[90px]"
+                />
+              </div>
+
+              <div className="flex justify-end gap-3 pt-4 border-t border-[#292929]">
+                <button
+                  type="button"
+                  onClick={closeModal}
+                  className="px-5 py-2.5 rounded-xl bg-[#171717] hover:bg-[#222] font-bold text-sm transition"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={createMutation.isPending || updateMutation.isPending}
+                  className="px-5 py-2.5 rounded-xl bg-gradient-to-br from-[#8b5cf6] to-[#5b21b6] font-bold text-sm transition hover:brightness-110 flex items-center gap-2"
+                >
+                  {(createMutation.isPending || updateMutation.isPending) && <Loader2 className="w-4 h-4 animate-spin" />}
+                  Salvar Divulgação
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

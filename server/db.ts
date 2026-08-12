@@ -1,6 +1,6 @@
-import { eq } from "drizzle-orm";
+import { eq, desc, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users } from "../drizzle/schema";
+import { InsertUser, users, divulgacoes, appConfig, Divulgacao, InsertDivulgacao } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -89,4 +89,60 @@ export async function getUserByOpenId(openId: string) {
   return result.length > 0 ? result[0] : undefined;
 }
 
-// TODO: add feature queries here as your schema grows.
+// ==========================================
+// Divulgacoes Database Helpers
+// ==========================================
+
+export async function getAllDivulgacoes(): Promise<Divulgacao[]> {
+  const db = await getDb();
+  if (!db) return [];
+  return await db.select().from(divulgacoes).orderBy(desc(divulgacoes.id));
+}
+
+export async function getDivulgacaoById(id: number): Promise<Divulgacao | undefined> {
+  const db = await getDb();
+  if (!db) return undefined;
+  const res = await db.select().from(divulgacoes).where(eq(divulgacoes.id, id)).limit(1);
+  return res[0];
+}
+
+export async function createDivulgacao(data: InsertDivulgacao): Promise<number> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const res = await db.insert(divulgacoes).values(data);
+  return Number(res[0].insertId);
+}
+
+export async function updateDivulgacao(id: number, data: Partial<InsertDivulgacao>): Promise<void> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.update(divulgacoes).set(data).where(eq(divulgacoes.id, id));
+}
+
+export async function deleteDivulgacao(id: number): Promise<void> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.delete(divulgacoes).where(eq(divulgacoes.id, id));
+}
+
+export async function getConfigValue(key: string, defaultValue: string): Promise<string> {
+  const db = await getDb();
+  if (!db) return defaultValue;
+  const res = await db.select().from(appConfig).where(eq(appConfig.key, key)).limit(1);
+  if (res.length > 0) {
+    return res[0].value;
+  }
+  return defaultValue;
+}
+
+export async function setConfigValue(key: string, value: string): Promise<void> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.insert(appConfig).values({ key, value }).onDuplicateKeyUpdate({ set: { value } });
+}
+
+export async function clearAllData(): Promise<void> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.delete(divulgacoes);
+}
