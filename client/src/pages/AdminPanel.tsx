@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { trpc } from "@/lib/trpc";
-import { LayoutDashboard, Megaphone, Users, Globe, Settings, LogOut, Plus, Search, ExternalLink, Edit, Trash2, Key, AlertTriangle, X, Loader2, Menu, AlertCircle, FileText, CheckCircle2, Image as ImageIcon, Music, UserCheck } from "lucide-react";
+import { LayoutDashboard, Megaphone, Users, Globe, Settings, LogOut, Plus, Search, ExternalLink, Edit, Trash2, Key, AlertTriangle, X, Loader2, Menu, AlertCircle, FileText, CheckCircle2, Image as ImageIcon, Music, UserCheck, ShieldAlert, Phone } from "lucide-react";
 import { toast } from "sonner";
 
 export default function AdminPanel({ onLogout }: { onLogout: () => void }) {
@@ -13,9 +13,14 @@ export default function AdminPanel({ onLogout }: { onLogout: () => void }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<{ id?: number; title: string; description: string; type: "grupo" | "canal" | "site"; link: string; image: string } | null>(null);
 
+  // Modal State para Membro da Equipe (Donos e Admins)
+  const [isEquipeModalOpen, setIsEquipeModalOpen] = useState(false);
+  const [editingEquipe, setEditingEquipe] = useState<{ id?: number; nome: string; cargo: string; foto: string; numeroContato: string } | null>(null);
+
   // Configurações globais do site state
   const { data: settings = {}, refetch: refetchSettings } = trpc.alianca.getSettings.useQuery();
   const { data: inscricoes = [], refetch: refetchInscricoes } = trpc.alianca.listRecrutamento.useQuery();
+  const { data: equipe = [], refetch: refetchEquipe } = trpc.alianca.listEquipe.useQuery();
 
   const [siteForm, setSiteForm] = useState({
     site_title: "",
@@ -57,7 +62,7 @@ export default function AdminPanel({ onLogout }: { onLogout: () => void }) {
   const [confirmPassword, setConfirmPassword] = useState("");
 
   const utils = trpc.useUtils();
-  const { data: stats, isLoading: statsLoading, error: statsError } = trpc.alianca.stats.useQuery();
+  const { data: stats, isLoading: statsError } = trpc.alianca.stats.useQuery();
   const { data: divulgacoes = [], isLoading: listLoading, error: listError } = trpc.alianca.list.useQuery();
 
   const logoutMutation = trpc.alianca.adminLogout.useMutation({
@@ -81,6 +86,35 @@ export default function AdminPanel({ onLogout }: { onLogout: () => void }) {
     onSuccess: () => {
       toast.success("Inscrição removida.");
       refetchInscricoes();
+      utils.alianca.stats.invalidate();
+    },
+    onError: (err) => toast.error(err.message)
+  });
+
+  const createEquipeMutation = trpc.alianca.createEquipe.useMutation({
+    onSuccess: () => {
+      toast.success("Membro da equipe adicionado com sucesso!");
+      refetchEquipe();
+      utils.alianca.stats.invalidate();
+      closeEquipeModal();
+    },
+    onError: (err) => toast.error(err.message)
+  });
+
+  const updateEquipeMutation = trpc.alianca.updateEquipe.useMutation({
+    onSuccess: () => {
+      toast.success("Membro atualizado com sucesso!");
+      refetchEquipe();
+      utils.alianca.stats.invalidate();
+      closeEquipeModal();
+    },
+    onError: (err) => toast.error(err.message)
+  });
+
+  const deleteEquipeMutation = trpc.alianca.deleteEquipe.useMutation({
+    onSuccess: () => {
+      toast.success("Membro removido da equipe.");
+      refetchEquipe();
       utils.alianca.stats.invalidate();
     },
     onError: (err) => toast.error(err.message)
@@ -131,6 +165,7 @@ export default function AdminPanel({ onLogout }: { onLogout: () => void }) {
       utils.alianca.list.invalidate();
       utils.alianca.stats.invalidate();
       refetchInscricoes();
+      refetchEquipe();
     },
     onError: (err) => toast.error(err.message)
   });
@@ -166,6 +201,53 @@ export default function AdminPanel({ onLogout }: { onLogout: () => void }) {
   const closeModal = () => {
     setIsModalOpen(false);
     setEditingItem(null);
+  };
+
+  const openCreateEquipeModal = () => {
+    setEditingEquipe({ nome: "", cargo: "Administrador", foto: "", numeroContato: "" });
+    setIsEquipeModalOpen(true);
+  };
+
+  const openEditEquipeModal = (membro: any) => {
+    setEditingEquipe({
+      id: membro.id,
+      nome: membro.nome,
+      cargo: membro.cargo,
+      foto: membro.foto || "",
+      numeroContato: membro.numeroContato,
+    });
+    setIsEquipeModalOpen(true);
+  };
+
+  const closeEquipeModal = () => {
+    setIsEquipeModalOpen(false);
+    setEditingEquipe(null);
+  };
+
+  const handleSaveEquipe = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingEquipe) return;
+    if (!editingEquipe.nome || !editingEquipe.cargo || !editingEquipe.numeroContato) {
+      toast.error("Preencha nome, cargo e número de contato.");
+      return;
+    }
+
+    if (editingEquipe.id) {
+      updateEquipeMutation.mutate({
+        id: editingEquipe.id,
+        nome: editingEquipe.nome,
+        cargo: editingEquipe.cargo,
+        foto: editingEquipe.foto,
+        numeroContato: editingEquipe.numeroContato,
+      });
+    } else {
+      createEquipeMutation.mutate({
+        nome: editingEquipe.nome,
+        cargo: editingEquipe.cargo,
+        foto: editingEquipe.foto,
+        numeroContato: editingEquipe.numeroContato,
+      });
+    }
   };
 
   const handleSaveItem = (e: React.FormEvent) => {
@@ -219,13 +301,14 @@ export default function AdminPanel({ onLogout }: { onLogout: () => void }) {
   };
 
   const handleClearAll = () => {
-    if (window.confirm("⚠️ ATENÇÃO: Deseja realmente excluir TODAS as divulgações e inscrições cadastradas? Esta ação não pode ser desfeita!")) {
+    if (window.confirm("⚠️ ATENÇÃO: Deseja realmente excluir TODAS as divulgações, inscrições e equipe? Esta ação não pode ser desfeita!")) {
       clearAllMutation.mutate();
     }
   };
 
   const navTitles: Record<string, string> = {
     dashboard: "Dashboard",
+    equipeAdmin: "Donos e Administradores",
     editImages: "Gerenciar Imagens do Site",
     editMusic: "Gerenciar Música do Site",
     recrutamento: "Inscrições de Recrutamento",
@@ -256,6 +339,12 @@ export default function AdminPanel({ onLogout }: { onLogout: () => void }) {
           className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-sm transition ${activeSection === "dashboard" ? "bg-[#8b5cf6] text-white" : "text-[#969696] hover:text-white hover:bg-[#171717]"}`}
         >
           <LayoutDashboard className="w-4 h-4" /> Dashboard
+        </button>
+        <button
+          onClick={() => { setActiveSection("equipeAdmin"); setMobileMenuOpen(false); }}
+          className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-sm transition ${activeSection === "equipeAdmin" ? "bg-[#8b5cf6] text-white" : "text-[#969696] hover:text-white hover:bg-[#171717]"}`}
+        >
+          <ShieldAlert className="w-4 h-4" /> Donos e Admins ({equipe.length})
         </button>
         <button
           onClick={() => { setActiveSection("editImages"); setMobileMenuOpen(false); }}
@@ -385,11 +474,11 @@ export default function AdminPanel({ onLogout }: { onLogout: () => void }) {
         {/* Content Body */}
         <div className="p-4 md:p-8 flex-1">
           {/* Global Error Banner */}
-          {(statsError || listError) && (
+          {listError && (
             <div className="mb-6 p-4 rounded-xl bg-[#ef4444]/15 border border-[#ef4444]/40 text-[#f87171] flex items-center gap-3">
               <AlertCircle className="w-5 h-5 shrink-0" />
               <div className="text-sm">
-                <strong>Erro de comunicação:</strong> {statsError?.message || listError?.message || "Falha ao carregar dados."}
+                <strong>Erro de comunicação:</strong> {listError?.message || "Falha ao carregar dados."}
               </div>
             </div>
           )}
@@ -401,41 +490,55 @@ export default function AdminPanel({ onLogout }: { onLogout: () => void }) {
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
                 <div className="p-6 rounded-2xl bg-[#111111] border border-[#292929]">
                   <div className="flex items-center justify-between mb-4">
-                    <span className="text-sm text-[#969696]">Total de Divulgações</span>
+                    <span className="text-sm text-[#969696]">Total Divulgações</span>
                     <Megaphone className="w-5 h-5 text-[#8b5cf6]" />
                   </div>
-                  <div className="text-3xl font-black">{stats?.total || 0}</div>
+                  <div className="text-3xl font-black">{divulgacoes.length}</div>
+                </div>
+                <div className="p-6 rounded-2xl bg-[#111111] border border-[#292929]">
+                  <div className="flex items-center justify-between mb-4">
+                    <span className="text-sm text-[#969696]">Donos e Admins</span>
+                    <ShieldAlert className="w-5 h-5 text-[#3b82f6]" />
+                  </div>
+                  <div className="text-3xl font-black">{equipe.length}</div>
                 </div>
                 <div className="p-6 rounded-2xl bg-[#111111] border border-[#292929]">
                   <div className="flex items-center justify-between mb-4">
                     <span className="text-sm text-[#969696]">Inscrições Recrutamento</span>
-                    <UserCheck className="w-5 h-5 text-[#3b82f6]" />
+                    <UserCheck className="w-5 h-5 text-[#22c55e]" />
                   </div>
                   <div className="text-3xl font-black">{inscricoes.length}</div>
                 </div>
                 <div className="p-6 rounded-2xl bg-[#111111] border border-[#292929]">
                   <div className="flex items-center justify-between mb-4">
-                    <span className="text-sm text-[#969696]">Canais Cadastrados</span>
-                    <Megaphone className="w-5 h-5 text-[#22c55e]" />
-                  </div>
-                  <div className="text-3xl font-black">{stats?.canais || 0}</div>
-                </div>
-                <div className="p-6 rounded-2xl bg-[#111111] border border-[#292929]">
-                  <div className="flex items-center justify-between mb-4">
-                    <span className="text-sm text-[#969696]">Sites Cadastrados</span>
+                    <span className="text-sm text-[#969696]">Canais & Sites</span>
                     <Globe className="w-5 h-5 text-[#f59e0b]" />
                   </div>
-                  <div className="text-3xl font-black">{stats?.sites || 0}</div>
+                  <div className="text-3xl font-black">{divulgacoes.filter(x => x.type !== "grupo").length}</div>
                 </div>
               </div>
 
               <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-5">
                 <div className="p-6 rounded-2xl bg-[#111111] border border-[#292929] space-y-3">
                   <div className="w-10 h-10 rounded-xl bg-[#8b5cf6]/20 flex items-center justify-center text-[#8b5cf6]">
+                    <ShieldAlert className="w-5 h-5" />
+                  </div>
+                  <h3 className="text-lg font-bold">Donos e Admins</h3>
+                  <p className="text-xs text-[#969696]">Gerencie fotos, nomes e números de contato da equipe.</p>
+                  <button
+                    onClick={() => setActiveSection("equipeAdmin")}
+                    className="w-full py-2.5 rounded-xl bg-[#1f1f1f] hover:bg-[#8b5cf6] text-white font-bold text-xs transition"
+                  >
+                    Gerenciar Equipe ({equipe.length})
+                  </button>
+                </div>
+
+                <div className="p-6 rounded-2xl bg-[#111111] border border-[#292929] space-y-3">
+                  <div className="w-10 h-10 rounded-xl bg-[#8b5cf6]/20 flex items-center justify-center text-[#8b5cf6]">
                     <ImageIcon className="w-5 h-5" />
                   </div>
                   <h3 className="text-lg font-bold">Gerenciar Imagens</h3>
-                  <p className="text-xs text-[#969696]">Altere a logo, fundo e imagens globais do site.</p>
+                  <p className="text-xs text-[#969696]">Altere a logo e o fundo (background) do site.</p>
                   <button
                     onClick={() => setActiveSection("editImages")}
                     className="w-full py-2.5 rounded-xl bg-[#1f1f1f] hover:bg-[#8b5cf6] text-white font-bold text-xs transition"
@@ -457,21 +560,83 @@ export default function AdminPanel({ onLogout }: { onLogout: () => void }) {
                     Configurar Música
                   </button>
                 </div>
+              </div>
+            </div>
+          )}
 
-                <div className="p-6 rounded-2xl bg-[#111111] border border-[#292929] space-y-3">
-                  <div className="w-10 h-10 rounded-xl bg-[#8b5cf6]/20 flex items-center justify-center text-[#8b5cf6]">
-                    <UserCheck className="w-5 h-5" />
-                  </div>
-                  <h3 className="text-lg font-bold">Recrutamento</h3>
-                  <p className="text-xs text-[#969696]">Veja os novos membros inscritos pelo site.</p>
+          {/* EQUIPE / CONTATOS (DONOS E ADMINS) */}
+          {activeSection === "equipeAdmin" && (
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h1 className="text-2xl md:text-3xl font-extrabold mb-1">Donos e Administradores</h1>
+                  <p className="text-sm text-[#969696]">Cadastre e edite nomes, fotos e números de contato que aparecem na aba pública da equipe.</p>
+                </div>
+                <button
+                  onClick={openCreateEquipeModal}
+                  className="px-4 py-2.5 rounded-xl bg-gradient-to-br from-[#8b5cf6] to-[#5b21b6] text-white text-sm font-bold transition hover:brightness-110 flex items-center gap-2"
+                >
+                  <Plus className="w-4 h-4" /> Adicionar Membro
+                </button>
+              </div>
+
+              {equipe.length === 0 ? (
+                <div className="text-center py-20 bg-[#111111] border border-[#292929] rounded-2xl p-8">
+                  <ShieldAlert className="w-12 h-12 mx-auto mb-3 text-[#555]" />
+                  <h3 className="text-lg font-bold mb-1">Nenhum membro cadastrado</h3>
+                  <p className="text-sm text-[#969696] mb-4">Adicione o primeiro dono ou administrador para exibi-lo no site.</p>
                   <button
-                    onClick={() => setActiveSection("recrutamento")}
-                    className="w-full py-2.5 rounded-xl bg-[#1f1f1f] hover:bg-[#8b5cf6] text-white font-bold text-xs transition"
+                    onClick={openCreateEquipeModal}
+                    className="px-5 py-2.5 rounded-xl bg-[#8b5cf6] text-white font-bold text-sm"
                   >
-                    Ver Inscrições ({inscricoes.length})
+                    Cadastrar Membro
                   </button>
                 </div>
-              </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {equipe.map((membro) => (
+                    <div key={membro.id} className="p-6 rounded-2xl bg-[#111111] border border-[#292929] space-y-4 flex flex-col justify-between">
+                      <div className="flex items-center gap-4">
+                        {membro.foto ? (
+                          <img src={membro.foto} alt="" className="w-16 h-16 rounded-full object-cover border border-[#8b5cf6] shrink-0" />
+                        ) : (
+                          <div className="w-16 h-16 rounded-full bg-gradient-to-br from-[#8b5cf6] to-[#5b21b6] flex items-center justify-center font-bold text-lg shrink-0">
+                            {membro.nome.charAt(0)}
+                          </div>
+                        )}
+                        <div>
+                          <span className="px-2.5 py-0.5 rounded-full bg-[#8b5cf6]/20 text-[#bca9ff] text-[10px] font-bold uppercase tracking-wider">
+                            {membro.cargo}
+                          </span>
+                          <h3 className="font-bold text-base mt-1">{membro.nome}</h3>
+                          <span className="text-xs text-[#969696] flex items-center gap-1 mt-0.5">
+                            <Phone className="w-3 h-3 text-[#8b5cf6]" /> {membro.numeroContato}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-end gap-2 pt-3 border-t border-[#222]">
+                        <button
+                          onClick={() => openEditEquipeModal(membro)}
+                          className="px-3 py-2 rounded-xl bg-[#8b5cf6]/20 hover:bg-[#8b5cf6]/30 text-[#bca9ff] text-xs font-bold transition flex items-center gap-1.5"
+                        >
+                          <Edit className="w-3.5 h-3.5" /> Editar
+                        </button>
+                        <button
+                          onClick={() => {
+                            if (window.confirm(`Deseja remover ${membro.nome} da equipe?`)) {
+                              deleteEquipeMutation.mutate({ id: membro.id });
+                            }
+                          }}
+                          className="px-3 py-2 rounded-xl bg-[#ef4444]/20 hover:bg-[#ef4444]/30 text-[#f87171] text-xs font-bold transition flex items-center gap-1.5"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" /> Excluir
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
@@ -490,7 +655,7 @@ export default function AdminPanel({ onLogout }: { onLogout: () => void }) {
                     type="text"
                     value={siteForm.site_logo}
                     onChange={(e) => setSiteForm({ ...siteForm, site_logo: e.target.value })}
-                    placeholder="https://exemplo.com/logo.png (Deixe vazio para usar o padrão 155)"
+                    placeholder="https://exemplo.com/logo.png"
                     className="w-full p-3 bg-[#0d0d0d] text-white border border-[#292929] rounded-xl outline-none focus:border-[#8b5cf6] text-sm"
                   />
                   {siteForm.site_logo && (
@@ -507,7 +672,7 @@ export default function AdminPanel({ onLogout }: { onLogout: () => void }) {
                     type="text"
                     value={siteForm.site_bg_image}
                     onChange={(e) => setSiteForm({ ...siteForm, site_bg_image: e.target.value })}
-                    placeholder="https://exemplo.com/background.jpg (Opcional)"
+                    placeholder="https://exemplo.com/background.jpg"
                     className="w-full p-3 bg-[#0d0d0d] text-white border border-[#292929] rounded-xl outline-none focus:border-[#8b5cf6] text-sm"
                   />
                   {siteForm.site_bg_image && (
@@ -905,7 +1070,7 @@ export default function AdminPanel({ onLogout }: { onLogout: () => void }) {
 
               <div className="p-6 rounded-2xl bg-[#111111] border border-[#ef4444]/40 space-y-4">
                 <h3 className="text-lg font-bold text-[#ef4444] flex items-center gap-2">⚠️ Zona de Perigo</h3>
-                <p className="text-sm text-[#969696]">Apagar permanentemente todas as divulgações e inscrições cadastradas no banco de dados.</p>
+                <p className="text-sm text-[#969696]">Apagar permanentemente todas as divulgações, inscrições e equipe cadastrados no banco.</p>
                 <button
                   onClick={handleClearAll}
                   disabled={clearAllMutation.isPending}
@@ -919,7 +1084,89 @@ export default function AdminPanel({ onLogout }: { onLogout: () => void }) {
         </div>
       </main>
 
-      {/* Modal CRUD */}
+      {/* Modal Equipe (Donos e Admins) */}
+      {isEquipeModalOpen && editingEquipe && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="w-full max-w-lg bg-[#111111] border border-[#292929] rounded-2xl p-6 relative max-h-[90vh] overflow-y-auto">
+            <button onClick={closeEquipeModal} className="absolute top-5 right-5 text-[#969696] hover:text-white">
+              <X className="w-5 h-5" />
+            </button>
+            <h2 className="text-xl font-bold mb-6">{editingEquipe.id ? "Editar Membro da Equipe" : "Adicionar Membro da Equipe"}</h2>
+
+            <form onSubmit={handleSaveEquipe} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">Nome *</label>
+                <input
+                  type="text"
+                  value={editingEquipe.nome}
+                  onChange={(e) => setEditingEquipe({ ...editingEquipe, nome: e.target.value })}
+                  placeholder="Ex: Carlos 155"
+                  className="w-full p-3 bg-[#0d0d0d] text-white border border-[#292929] rounded-xl outline-none focus:border-[#8b5cf6] text-sm"
+                  required
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1">Cargo *</label>
+                  <select
+                    value={editingEquipe.cargo}
+                    onChange={(e) => setEditingEquipe({ ...editingEquipe, cargo: e.target.value })}
+                    className="w-full p-3 bg-[#0d0d0d] text-white border border-[#292929] rounded-xl outline-none focus:border-[#8b5cf6] text-sm"
+                  >
+                    <option value="Dono">Dono</option>
+                    <option value="Administrador">Administrador</option>
+                    <option value="Moderador">Moderador</option>
+                    <option value="Fundador">Fundador</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Número de Contato / WhatsApp *</label>
+                  <input
+                    type="text"
+                    value={editingEquipe.numeroContato}
+                    onChange={(e) => setEditingEquipe({ ...editingEquipe, numeroContato: e.target.value })}
+                    placeholder="Ex: +55 11 99999-9999"
+                    className="w-full p-3 bg-[#0d0d0d] text-white border border-[#292929] rounded-xl outline-none focus:border-[#8b5cf6] text-sm"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-1">URL da Foto de Perfil (Opcional)</label>
+                <input
+                  type="text"
+                  value={editingEquipe.foto}
+                  onChange={(e) => setEditingEquipe({ ...editingEquipe, foto: e.target.value })}
+                  placeholder="https://exemplo.com/foto.jpg"
+                  className="w-full p-3 bg-[#0d0d0d] text-white border border-[#292929] rounded-xl outline-none focus:border-[#8b5cf6] text-sm"
+                />
+              </div>
+
+              <div className="flex justify-end gap-3 pt-4 border-t border-[#292929]">
+                <button
+                  type="button"
+                  onClick={closeEquipeModal}
+                  className="px-5 py-2.5 rounded-xl bg-[#171717] hover:bg-[#222] font-bold text-sm transition"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={createEquipeMutation.isPending || updateEquipeMutation.isPending}
+                  className="px-5 py-2.5 rounded-xl bg-gradient-to-br from-[#8b5cf6] to-[#5b21b6] font-bold text-sm transition hover:brightness-110 flex items-center gap-2"
+                >
+                  {(createEquipeMutation.isPending || updateEquipeMutation.isPending) && <Loader2 className="w-4 h-4 animate-spin" />}
+                  Salvar Membro
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal CRUD Divulgação */}
       {isModalOpen && editingItem && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="w-full max-w-lg bg-[#111111] border border-[#292929] rounded-2xl p-6 relative max-h-[90vh] overflow-y-auto">

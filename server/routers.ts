@@ -53,6 +53,56 @@ export const appRouter = router({
       return await db.getAllSiteSettings();
     }),
 
+    // Listar equipe (donos e admins) (público)
+    listEquipe: publicProcedure.query(async () => {
+      return await db.getAllEquipeContatos();
+    }),
+
+    // Criar membro da equipe (admin)
+    createEquipe: adminProcedure
+      .input(z.object({
+        nome: z.string().min(1, "Nome é obrigatório"),
+        cargo: z.string().min(1, "Cargo é obrigatório"),
+        foto: z.string().optional().default(""),
+        numeroContato: z.string().min(1, "Número de contato é obrigatório"),
+      }))
+      .mutation(async ({ input }) => {
+        const id = await db.createEquipeContato({
+          nome: input.nome,
+          cargo: input.cargo,
+          foto: input.foto || null,
+          numeroContato: input.numeroContato,
+        });
+        return { success: true, id };
+      }),
+
+    // Atualizar membro da equipe (admin)
+    updateEquipe: adminProcedure
+      .input(z.object({
+        id: z.number(),
+        nome: z.string().min(1),
+        cargo: z.string().min(1),
+        foto: z.string().optional().default(""),
+        numeroContato: z.string().min(1),
+      }))
+      .mutation(async ({ input }) => {
+        await db.updateEquipeContato(input.id, {
+          nome: input.nome,
+          cargo: input.cargo,
+          foto: input.foto || null,
+          numeroContato: input.numeroContato,
+        });
+        return { success: true };
+      }),
+
+    // Excluir membro da equipe (admin)
+    deleteEquipe: adminProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        await db.deleteEquipeContato(input.id);
+        return { success: true };
+      }),
+
     // Enviar inscrição para recrutamento (público)
     submitRecrutamento: publicProcedure
       .input(z.object({
@@ -97,12 +147,14 @@ export const appRouter = router({
     stats: adminProcedure.query(async () => {
       const all = await db.getAllDivulgacoes();
       const inscricoes = await db.getAllRecrutamentoInscricoes();
+      const equipe = await db.getAllEquipeContatos();
       const total = all.length;
       const grupos = all.filter(x => x.type === "grupo").length;
       const canais = all.filter(x => x.type === "canal").length;
       const sites = all.filter(x => x.type === "site").length;
       const totalInscricoes = inscricoes.length;
-      return { total, grupos, canais, sites, totalInscricoes };
+      const totalEquipe = equipe.length;
+      return { total, grupos, canais, sites, totalInscricoes, totalEquipe };
     }),
 
     // Verificar se sessão admin é válida

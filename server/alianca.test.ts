@@ -83,6 +83,43 @@ describe("Aliança 155 tRPC Router", () => {
     expect(deleteRes.success).toBe(true);
   });
 
+  it("should manage team members with name, role, photo and contact", async () => {
+    const ctx = createTestContext();
+    const caller = appRouter.createCaller(ctx);
+
+    await caller.alianca.login({ password: "155admin" });
+
+    const createRes = await caller.alianca.createEquipe({
+      nome: "Administrador de Teste",
+      cargo: "Administrador",
+      foto: "https://example.com/admin.jpg",
+      numeroContato: "+55 11 99999-0000",
+    });
+    expect(createRes.success).toBe(true);
+    expect(createRes.id).toBeTypeOf("number");
+
+    const equipe = await caller.alianca.listEquipe();
+    const created = equipe.find(item => item.id === createRes.id);
+    expect(created?.nome).toBe("Administrador de Teste");
+    expect(created?.numeroContato).toBe("+55 11 99999-0000");
+
+    const updateRes = await caller.alianca.updateEquipe({
+      id: createRes.id,
+      nome: "Dono Atualizado",
+      cargo: "Dono",
+      foto: "https://example.com/dono.jpg",
+      numeroContato: "+55 11 98888-0000",
+    });
+    expect(updateRes.success).toBe(true);
+
+    const updated = (await caller.alianca.listEquipe()).find(item => item.id === createRes.id);
+    expect(updated?.nome).toBe("Dono Atualizado");
+    expect(updated?.cargo).toBe("Dono");
+
+    const deleteRes = await caller.alianca.deleteEquipe({ id: createRes.id });
+    expect(deleteRes.success).toBe(true);
+  });
+
   it("should change password successfully and reject incorrect old password", async () => {
     const ctx = createTestContext();
     const caller = appRouter.createCaller(ctx);

@@ -53,8 +53,19 @@ export const recrutamentoInscricoes = mysqlTable("recrutamento_inscricoes", {
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 
+export const equipeContatos = mysqlTable("equipe_contatos", {
+  id: int("id").autoincrement().primaryKey(),
+  nome: varchar("nome", { length: 255 }).notNull(),
+  cargo: varchar("cargo", { length: 100 }).notNull(), // 'Dono', 'Administrador', etc.
+  foto: text("foto"),
+  numeroContato: varchar("numeroContato", { length: 100 }).notNull(), // Ex: +55 11 99999-9999 ou @usuario
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
 export type Divulgacao = typeof divulgacoes.$inferSelect;
 export type InsertDivulgacao = typeof divulgacoes.$inferInsert;
 export type AppConfig = typeof appConfig.$inferSelect;
 export type RecrutamentoInscricao = typeof recrutamentoInscricoes.$inferSelect;
 export type InsertRecrutamentoInscricao = typeof recrutamentoInscricoes.$inferInsert;
+export type EquipeContato = typeof equipeContatos.$inferSelect;
+export type InsertEquipeContato = typeof equipeContatos.$inferInsert;

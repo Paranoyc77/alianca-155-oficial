@@ -1,6 +1,6 @@
 import { eq, desc, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, divulgacoes, appConfig, recrutamentoInscricoes, Divulgacao, InsertDivulgacao, RecrutamentoInscricao, InsertRecrutamentoInscricao } from "../drizzle/schema";
+import { InsertUser, users, divulgacoes, appConfig, recrutamentoInscricoes, equipeContatos, Divulgacao, InsertDivulgacao, RecrutamentoInscricao, InsertRecrutamentoInscricao, EquipeContato, InsertEquipeContato } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -148,6 +148,35 @@ export async function deleteRecrutamentoInscricao(id: number): Promise<void> {
   await db.delete(recrutamentoInscricoes).where(eq(recrutamentoInscricoes.id, id));
 }
 
+// ==========================================
+// Equipe / Contatos Database Helpers
+// ==========================================
+
+export async function getAllEquipeContatos(): Promise<EquipeContato[]> {
+  const db = await getDb();
+  if (!db) return [];
+  return await db.select().from(equipeContatos).orderBy(desc(equipeContatos.id));
+}
+
+export async function createEquipeContato(data: InsertEquipeContato): Promise<number> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const res = await db.insert(equipeContatos).values(data);
+  return Number(res[0].insertId);
+}
+
+export async function updateEquipeContato(id: number, data: Partial<InsertEquipeContato>): Promise<void> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.update(equipeContatos).set(data).where(eq(equipeContatos.id, id));
+}
+
+export async function deleteEquipeContato(id: number): Promise<void> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.delete(equipeContatos).where(eq(equipeContatos.id, id));
+}
+
 export async function getConfigValue(key: string, defaultValue: string): Promise<string> {
   const db = await getDb();
   if (!db) return defaultValue;
@@ -209,4 +238,5 @@ export async function clearAllData(): Promise<void> {
   if (!db) throw new Error("Database not available");
   await db.delete(divulgacoes);
   await db.delete(recrutamentoInscricoes);
+  await db.delete(equipeContatos);
 }
