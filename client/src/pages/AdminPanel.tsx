@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { trpc } from "@/lib/trpc";
-import { LayoutDashboard, Megaphone, Users, Globe, Settings, LogOut, Plus, Search, ExternalLink, Edit, Trash2, Key, AlertTriangle, X, Loader2, Menu, AlertCircle, FileText, CheckCircle2, Image as ImageIcon, Music, UserCheck, ShieldAlert, Phone, Eye, Activity } from "lucide-react";
+import { LayoutDashboard, Megaphone, Users, Globe, Settings, LogOut, Plus, Search, ExternalLink, Edit, Trash2, Key, AlertTriangle, X, Loader2, Menu, AlertCircle, FileText, CheckCircle2, Image as ImageIcon, Music, UserCheck, ShieldAlert, Phone, Eye, Activity, Palette, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
 
 export default function AdminPanel({ onLogout }: { onLogout: () => void }) {
@@ -49,6 +49,16 @@ export default function AdminPanel({ onLogout }: { onLogout: () => void }) {
     site_bg_image: "",
     site_music_url: "",
     site_music_title: "Trilha Sonora Oficial",
+    // Color tokens
+    color_bg: "#050505",
+    color_card_bg: "#0d0d0d",
+    color_card_border: "#222222",
+    color_text_main: "#ffffff",
+    color_text_muted: "#969696",
+    color_primary: "#8b5cf6",
+    color_primary_hover: "#7c3aed",
+    color_accent: "#c4b5fd",
+    color_button_bg: "#171717",
   });
 
   const utils = trpc.useUtils();
@@ -137,7 +147,7 @@ export default function AdminPanel({ onLogout }: { onLogout: () => void }) {
 
   const updateSettingsMutation = trpc.alianca.updateSettings.useMutation({
     onSuccess: () => {
-      toast.success("Configurações do site salvas com sucesso!");
+      toast.success("Configurações salvas com sucesso!");
       utils.alianca.getSettings.invalidate();
     },
     onError: (err) => toast.error(err.message || "Erro ao salvar configurações.")
@@ -267,6 +277,22 @@ export default function AdminPanel({ onLogout }: { onLogout: () => void }) {
     updateSettingsMutation.mutate(siteForm);
   };
 
+  const resetColorsToDefault = () => {
+    setSiteForm(prev => ({
+      ...prev,
+      color_bg: "#050505",
+      color_card_bg: "#0d0d0d",
+      color_card_border: "#222222",
+      color_text_main: "#ffffff",
+      color_text_muted: "#969696",
+      color_primary: "#8b5cf6",
+      color_primary_hover: "#7c3aed",
+      color_accent: "#c4b5fd",
+      color_button_bg: "#171717",
+    }));
+    toast.success("Cores restauradas para o padrão! Clique em 'Salvar Cores' para aplicar.");
+  };
+
   const handlePasswordChange = (e: React.FormEvent) => {
     e.preventDefault();
     if (!oldPassword || !newPassword || !confirmPassword) {
@@ -320,6 +346,12 @@ export default function AdminPanel({ onLogout }: { onLogout: () => void }) {
             className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-sm transition ${activeSection === "equipeAdmin" ? "bg-[#8b5cf6] text-white" : "text-[#969696] hover:text-white hover:bg-[#171717]"}`}
           >
             <ShieldAlert className="w-4 h-4" /> Donos e Admins ({equipe.length})
+          </button>
+          <button
+            onClick={() => setActiveSection("editColors")}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-sm transition ${activeSection === "editColors" ? "bg-[#8b5cf6] text-white" : "text-[#969696] hover:text-white hover:bg-[#171717]"}`}
+          >
+            <Palette className="w-4 h-4" /> Cores do Site
           </button>
           <button
             onClick={() => setActiveSection("editImages")}
@@ -384,7 +416,7 @@ export default function AdminPanel({ onLogout }: { onLogout: () => void }) {
           </div>
 
           <div className="hidden lg:block text-sm text-[#969696]">
-            Bem-vindo ao painel administrativo da Aliança 155.
+            Painel administrativo com controle total de conteúdo, imagens, música e cores.
           </div>
 
           <div className="flex items-center gap-3">
@@ -407,7 +439,6 @@ export default function AdminPanel({ onLogout }: { onLogout: () => void }) {
 
         {/* Content Body */}
         <div className="p-4 md:p-8 flex-1">
-          {/* Global Error Banner */}
           {listError && (
             <div className="mb-6 p-4 rounded-xl bg-[#ef4444]/15 border border-[#ef4444]/40 text-[#f87171] flex items-center gap-3">
               <AlertCircle className="w-5 h-5 shrink-0" />
@@ -465,28 +496,10 @@ export default function AdminPanel({ onLogout }: { onLogout: () => void }) {
                   <div className="text-3xl font-black">{stats?.usuariosOnline ?? 1}</div>
                 </div>
               </div>
-
-              <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-5">
-                <div className="p-6 rounded-2xl bg-[#111111] border border-[#292929] space-y-3">
-                  <h3 className="font-bold text-lg">Grupos Cadastrados</h3>
-                  <p className="text-3xl font-black text-[#8b5cf6]">{divulgacoes.filter(x => x.type === "grupo").length}</p>
-                  <p className="text-xs text-[#969696]">Grupos ativos na listagem pública da comunidade.</p>
-                </div>
-                <div className="p-6 rounded-2xl bg-[#111111] border border-[#292929] space-y-3">
-                  <h3 className="font-bold text-lg">Canais Parceiros</h3>
-                  <p className="text-3xl font-black text-[#3b82f6]">{divulgacoes.filter(x => x.type === "canal").length}</p>
-                  <p className="text-xs text-[#969696]">Canais de divulgação e avisos oficiais.</p>
-                </div>
-                <div className="p-6 rounded-2xl bg-[#111111] border border-[#292929] space-y-3">
-                  <h3 className="font-bold text-lg">Sites Indicados</h3>
-                  <p className="text-3xl font-black text-[#f59e0b]">{divulgacoes.filter(x => x.type === "site").length}</p>
-                  <p className="text-xs text-[#969696]">Websites recomendados pela Aliança.</p>
-                </div>
-              </div>
             </div>
           )}
 
-          {/* EQUIPE (DONOS E ADMINS) */}
+          {/* EQUIPE */}
           {activeSection === "equipeAdmin" && (
             <div className="space-y-6">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -562,7 +575,208 @@ export default function AdminPanel({ onLogout }: { onLogout: () => void }) {
             </div>
           )}
 
-          {/* EDITAR IMAGENS DO SITE */}
+          {/* EDITOR DE CORES */}
+          {activeSection === "editColors" && (
+            <div className="space-y-6 max-w-3xl">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h1 className="text-2xl md:text-3xl font-extrabold mb-1">Editor Completo de Cores do Site</h1>
+                  <p className="text-sm text-[#969696]">Personalize cada detalhe da paleta de cores do site. Todas as alterações são aplicadas instantaneamente.</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={resetColorsToDefault}
+                  className="px-3 py-2 rounded-xl bg-[#1f1f1f] hover:bg-[#2a2a2a] text-xs font-bold text-[#ccc] flex items-center gap-1.5 border border-[#333]"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" /> Restaurar Padrão
+                </button>
+              </div>
+
+              <form onSubmit={handleSaveSiteSettings} className="p-6 rounded-2xl bg-[#111111] border border-[#292929] space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  <div className="p-4 rounded-xl bg-[#0d0d0d] border border-[#222] flex items-center justify-between">
+                    <div>
+                      <label className="block text-sm font-bold mb-0.5">Cor de Fundo (Background)</label>
+                      <span className="text-xs text-[#969696]">Fundo principal da página</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="color"
+                        value={siteForm.color_bg}
+                        onChange={(e) => setSiteForm({ ...siteForm, color_bg: e.target.value })}
+                        className="w-10 h-10 rounded-lg bg-transparent cursor-pointer border border-[#333]"
+                      />
+                      <input
+                        type="text"
+                        value={siteForm.color_bg}
+                        onChange={(e) => setSiteForm({ ...siteForm, color_bg: e.target.value })}
+                        className="w-24 p-2 bg-[#171717] text-white text-xs border border-[#333] rounded-lg text-center font-mono"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="p-4 rounded-xl bg-[#0d0d0d] border border-[#222] flex items-center justify-between">
+                    <div>
+                      <label className="block text-sm font-bold mb-0.5">Fundo dos Cards</label>
+                      <span className="text-xs text-[#969696]">Cor dos blocos e cartões</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="color"
+                        value={siteForm.color_card_bg}
+                        onChange={(e) => setSiteForm({ ...siteForm, color_card_bg: e.target.value })}
+                        className="w-10 h-10 rounded-lg bg-transparent cursor-pointer border border-[#333]"
+                      />
+                      <input
+                        type="text"
+                        value={siteForm.color_card_bg}
+                        onChange={(e) => setSiteForm({ ...siteForm, color_card_bg: e.target.value })}
+                        className="w-24 p-2 bg-[#171717] text-white text-xs border border-[#333] rounded-lg text-center font-mono"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="p-4 rounded-xl bg-[#0d0d0d] border border-[#222] flex items-center justify-between">
+                    <div>
+                      <label className="block text-sm font-bold mb-0.5">Borda dos Cards</label>
+                      <span className="text-xs text-[#969696]">Linhas delimitadoras</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="color"
+                        value={siteForm.color_card_border}
+                        onChange={(e) => setSiteForm({ ...siteForm, color_card_border: e.target.value })}
+                        className="w-10 h-10 rounded-lg bg-transparent cursor-pointer border border-[#333]"
+                      />
+                      <input
+                        type="text"
+                        value={siteForm.color_card_border}
+                        onChange={(e) => setSiteForm({ ...siteForm, color_card_border: e.target.value })}
+                        className="w-24 p-2 bg-[#171717] text-white text-xs border border-[#333] rounded-lg text-center font-mono"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="p-4 rounded-xl bg-[#0d0d0d] border border-[#222] flex items-center justify-between">
+                    <div>
+                      <label className="block text-sm font-bold mb-0.5">Texto Principal</label>
+                      <span className="text-xs text-[#969696]">Títulos e textos destacados</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="color"
+                        value={siteForm.color_text_main}
+                        onChange={(e) => setSiteForm({ ...siteForm, color_text_main: e.target.value })}
+                        className="w-10 h-10 rounded-lg bg-transparent cursor-pointer border border-[#333]"
+                      />
+                      <input
+                        type="text"
+                        value={siteForm.color_text_main}
+                        onChange={(e) => setSiteForm({ ...siteForm, color_text_main: e.target.value })}
+                        className="w-24 p-2 bg-[#171717] text-white text-xs border border-[#333] rounded-lg text-center font-mono"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="p-4 rounded-xl bg-[#0d0d0d] border border-[#222] flex items-center justify-between">
+                    <div>
+                      <label className="block text-sm font-bold mb-0.5">Texto Secundário / Muted</label>
+                      <span className="text-xs text-[#969696]">Descrições e legendas</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="color"
+                        value={siteForm.color_text_muted}
+                        onChange={(e) => setSiteForm({ ...siteForm, color_text_muted: e.target.value })}
+                        className="w-10 h-10 rounded-lg bg-transparent cursor-pointer border border-[#333]"
+                      />
+                      <input
+                        type="text"
+                        value={siteForm.color_text_muted}
+                        onChange={(e) => setSiteForm({ ...siteForm, color_text_muted: e.target.value })}
+                        className="w-24 p-2 bg-[#171717] text-white text-xs border border-[#333] rounded-lg text-center font-mono"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="p-4 rounded-xl bg-[#0d0d0d] border border-[#222] flex items-center justify-between">
+                    <div>
+                      <label className="block text-sm font-bold mb-0.5">Cor Principal (Roxo Accent)</label>
+                      <span className="text-xs text-[#969696]">Botões ativos e destaques</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="color"
+                        value={siteForm.color_primary}
+                        onChange={(e) => setSiteForm({ ...siteForm, color_primary: e.target.value })}
+                        className="w-10 h-10 rounded-lg bg-transparent cursor-pointer border border-[#333]"
+                      />
+                      <input
+                        type="text"
+                        value={siteForm.color_primary}
+                        onChange={(e) => setSiteForm({ ...siteForm, color_primary: e.target.value })}
+                        className="w-24 p-2 bg-[#171717] text-white text-xs border border-[#333] rounded-lg text-center font-mono"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="p-4 rounded-xl bg-[#0d0d0d] border border-[#222] flex items-center justify-between">
+                    <div>
+                      <label className="block text-sm font-bold mb-0.5">Cor Principal Hover</label>
+                      <span className="text-xs text-[#969696]">Tom ao passar o mouse</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="color"
+                        value={siteForm.color_primary_hover}
+                        onChange={(e) => setSiteForm({ ...siteForm, color_primary_hover: e.target.value })}
+                        className="w-10 h-10 rounded-lg bg-transparent cursor-pointer border border-[#333]"
+                      />
+                      <input
+                        type="text"
+                        value={siteForm.color_primary_hover}
+                        onChange={(e) => setSiteForm({ ...siteForm, color_primary_hover: e.target.value })}
+                        className="w-24 p-2 bg-[#171717] text-white text-xs border border-[#333] rounded-lg text-center font-mono"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="p-4 rounded-xl bg-[#0d0d0d] border border-[#222] flex items-center justify-between">
+                    <div>
+                      <label className="block text-sm font-bold mb-0.5">Cor de Destaque / Acento</label>
+                      <span className="text-xs text-[#969696]">Tons claros de gradiente</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="color"
+                        value={siteForm.color_accent}
+                        onChange={(e) => setSiteForm({ ...siteForm, color_accent: e.target.value })}
+                        className="w-10 h-10 rounded-lg bg-transparent cursor-pointer border border-[#333]"
+                      />
+                      <input
+                        type="text"
+                        value={siteForm.color_accent}
+                        onChange={(e) => setSiteForm({ ...siteForm, color_accent: e.target.value })}
+                        className="w-24 p-2 bg-[#171717] text-white text-xs border border-[#333] rounded-lg text-center font-mono"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="pt-4 flex justify-end">
+                  <button
+                    type="submit"
+                    disabled={updateSettingsMutation.isPending}
+                    className="py-3 px-6 rounded-xl bg-gradient-to-br from-[#8b5cf6] to-[#5b21b6] text-white font-bold text-sm transition hover:brightness-110 flex items-center gap-2 shadow-lg"
+                  >
+                    {updateSettingsMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Palette className="w-4 h-4" />} Salvar Todas as Cores
+                  </button>
+                </div>
+              </form>
+            </div>
+          )}
+
+          {/* EDITAR IMAGENS */}
           {activeSection === "editImages" && (
             <div className="space-y-6 max-w-3xl">
               <div>
@@ -580,7 +794,6 @@ export default function AdminPanel({ onLogout }: { onLogout: () => void }) {
                     placeholder="https://exemplo.com/logo.png"
                     className="w-full p-3 bg-[#0d0d0d] text-white border border-[#292929] rounded-xl outline-none focus:border-[#8b5cf6] text-sm"
                   />
-                  <p className="text-xs text-[#777] mt-1">Cole o link direto da imagem da logo.</p>
                 </div>
 
                 {siteForm.site_logo && (
@@ -599,7 +812,6 @@ export default function AdminPanel({ onLogout }: { onLogout: () => void }) {
                     placeholder="https://exemplo.com/background.jpg"
                     className="w-full p-3 bg-[#0d0d0d] text-white border border-[#292929] rounded-xl outline-none focus:border-[#8b5cf6] text-sm"
                   />
-                  <p className="text-xs text-[#777] mt-1">Deixe em branco para usar o fundo dark padrão.</p>
                 </div>
 
                 {siteForm.site_bg_image && (
@@ -622,12 +834,12 @@ export default function AdminPanel({ onLogout }: { onLogout: () => void }) {
             </div>
           )}
 
-          {/* EDITAR MÚSICA DO SITE */}
+          {/* EDITAR MÚSICA */}
           {activeSection === "editMusic" && (
             <div className="space-y-6 max-w-3xl">
               <div>
                 <h1 className="text-2xl md:text-3xl font-extrabold mb-1">Gerenciar Música de Fundo</h1>
-                <p className="text-sm text-[#969696]">Configure a trilha sonora do site usando um link direto de áudio (.mp3/.wav) ou um link do YouTube (watch, youtu.be, shorts).</p>
+                <p className="text-sm text-[#969696]">Configure a trilha sonora do site usando link direto de áudio ou link do YouTube.</p>
               </div>
 
               <form onSubmit={handleSaveSiteSettings} className="p-6 rounded-2xl bg-[#111111] border border-[#292929] space-y-5">
@@ -648,24 +860,10 @@ export default function AdminPanel({ onLogout }: { onLogout: () => void }) {
                     type="text"
                     value={siteForm.site_music_url}
                     onChange={(e) => setSiteForm({ ...siteForm, site_music_url: e.target.value })}
-                    placeholder="Ex: https://www.youtube.com/watch?v=XXXXX ou https://exemplo.com/musica.mp3"
+                    placeholder="Ex: https://www.youtube.com/watch?v=XXXXX"
                     className="w-full p-3 bg-[#0d0d0d] text-white border border-[#292929] rounded-xl outline-none focus:border-[#8b5cf6] text-sm"
                   />
-                  <p className="text-xs text-[#8b5cf6] mt-1.5">Suporta links do YouTube (ex: youtube.com/watch?v=... ou youtu.be/...) e links diretos de áudio.</p>
                 </div>
-
-                {siteForm.site_music_url && (
-                  <div className="p-4 rounded-xl bg-[#0d0d0d] border border-[#292929] space-y-3">
-                    <span className="text-xs font-bold text-[#bca9ff]">Teste / Visualização do Player:</span>
-                    {siteForm.site_music_url.includes("youtube.com") || siteForm.site_music_url.includes("youtu.be") ? (
-                      <div className="text-xs text-[#22c55e] flex items-center gap-2">
-                        <CheckCircle2 className="w-4 h-4" /> Link do YouTube identificado com sucesso!
-                      </div>
-                    ) : (
-                      <audio controls src={siteForm.site_music_url} className="w-full h-10 accent-[#8b5cf6]" />
-                    )}
-                  </div>
-                )}
 
                 <div className="pt-4 flex justify-end">
                   <button
@@ -673,28 +871,26 @@ export default function AdminPanel({ onLogout }: { onLogout: () => void }) {
                     disabled={updateSettingsMutation.isPending}
                     className="py-3 px-6 rounded-xl bg-gradient-to-br from-[#8b5cf6] to-[#5b21b6] text-white font-bold text-sm transition hover:brightness-110 flex items-center gap-2"
                   >
-                    {updateSettingsMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Music className="w-4 h-4" />} Salvar Música do Site
+                    {updateSettingsMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Music className="w-4 h-4" />} Salvar Música
                   </button>
                 </div>
               </form>
             </div>
           )}
 
-          {/* RECRUTAMENTO (INSCRITOS) */}
+          {/* RECRUTAMENTO */}
           {activeSection === "recrutamento" && (
             <div className="space-y-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h1 className="text-2xl md:text-3xl font-extrabold mb-1">Inscrições de Recrutamento</h1>
-                  <p className="text-sm text-[#969696]">Candidatos que se inscreveram para entrar na comunidade através do site.</p>
-                </div>
+              <div>
+                <h1 className="text-2xl md:text-3xl font-extrabold mb-1">Inscrições de Recrutamento</h1>
+                <p className="text-sm text-[#969696]">Candidatos que se inscreveram para entrar na comunidade.</p>
               </div>
 
               {inscricoes.length === 0 ? (
                 <div className="text-center py-20 bg-[#111111] border border-[#292929] rounded-2xl p-8">
                   <UserCheck className="w-12 h-12 mx-auto mb-3 text-[#555]" />
                   <h3 className="text-lg font-bold mb-1">Nenhuma inscrição recebida</h3>
-                  <p className="text-sm text-[#969696]">Assim que novos membros preencherem o formulário na aba de recrutamento do site, eles aparecerão aqui.</p>
+                  <p className="text-sm text-[#969696]">Assim que novos membros preencherem o formulário no site, aparecerão aqui.</p>
                 </div>
               ) : (
                 <div className="space-y-4">
@@ -716,7 +912,7 @@ export default function AdminPanel({ onLogout }: { onLogout: () => void }) {
                               }
                             }}
                             className="p-2 rounded-xl bg-[#ef4444]/20 text-[#f87171] hover:bg-[#ef4444]/30 transition"
-                            title="Excluir Inscrição"
+                            title="Excluir"
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>
@@ -740,18 +936,18 @@ export default function AdminPanel({ onLogout }: { onLogout: () => void }) {
             </div>
           )}
 
-          {/* EDITAR CONTEÚDO DO SITE (TEXTOS E IDENTIDADE) */}
+          {/* EDITAR TEXTOS */}
           {activeSection === "editSite" && (
             <div className="space-y-6 max-w-3xl">
               <div>
                 <h1 className="text-2xl md:text-3xl font-extrabold mb-1">Editar Textos e Identidade</h1>
-                <p className="text-sm text-[#969696]">Personalize títulos, subtítulos, selo hero, descrição e rodapé do site.</p>
+                <p className="text-sm text-[#969696]">Personalize títulos, subtítulos, selo hero, descrição e rodapé.</p>
               </div>
 
               <form onSubmit={handleSaveSiteSettings} className="p-6 rounded-2xl bg-[#111111] border border-[#292929] space-y-5">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium mb-1.5">Título do Site (Aba do Navegador)</label>
+                    <label className="block text-sm font-medium mb-1.5">Título do Site</label>
                     <input
                       type="text"
                       value={siteForm.site_title}
@@ -760,7 +956,7 @@ export default function AdminPanel({ onLogout }: { onLogout: () => void }) {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-1.5">Subtítulo / Descrição da Logo</label>
+                    <label className="block text-sm font-medium mb-1.5">Subtítulo</label>
                     <input
                       type="text"
                       value={siteForm.site_subtitle}
@@ -772,7 +968,7 @@ export default function AdminPanel({ onLogout }: { onLogout: () => void }) {
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
-                    <label className="block text-sm font-medium mb-1.5">Selo Hero (Badge)</label>
+                    <label className="block text-sm font-medium mb-1.5">Selo Hero</label>
                     <input
                       type="text"
                       value={siteForm.hero_badge}
@@ -781,7 +977,7 @@ export default function AdminPanel({ onLogout }: { onLogout: () => void }) {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-1.5">Título Principal (Hero)</label>
+                    <label className="block text-sm font-medium mb-1.5">Título Principal</label>
                     <input
                       type="text"
                       value={siteForm.hero_title_main}
@@ -790,7 +986,7 @@ export default function AdminPanel({ onLogout }: { onLogout: () => void }) {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-1.5">Palavra Colorida (Accent)</label>
+                    <label className="block text-sm font-medium mb-1.5">Palavra Colorida</label>
                     <input
                       type="text"
                       value={siteForm.hero_title_accent}
@@ -811,7 +1007,7 @@ export default function AdminPanel({ onLogout }: { onLogout: () => void }) {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium mb-1.5">Texto do Botão Admin</label>
+                    <label className="block text-sm font-medium mb-1.5">Texto Botão Admin</label>
                     <input
                       type="text"
                       value={siteForm.admin_btn_text}
@@ -820,7 +1016,7 @@ export default function AdminPanel({ onLogout }: { onLogout: () => void }) {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-1.5">Texto do Rodapé</label>
+                    <label className="block text-sm font-medium mb-1.5">Texto Rodapé</label>
                     <input
                       type="text"
                       value={siteForm.footer_text}
@@ -836,14 +1032,14 @@ export default function AdminPanel({ onLogout }: { onLogout: () => void }) {
                     disabled={updateSettingsMutation.isPending}
                     className="py-3 px-6 rounded-xl bg-gradient-to-br from-[#8b5cf6] to-[#5b21b6] text-white font-bold text-sm transition hover:brightness-110 flex items-center gap-2"
                   >
-                    {updateSettingsMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileText className="w-4 h-4" />} Salvar Textos do Site
+                    {updateSettingsMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileText className="w-4 h-4" />} Salvar Textos
                   </button>
                 </div>
               </form>
             </div>
           )}
 
-          {/* LISTA DE DIVULGAÇÕES */}
+          {/* DIVULGAÇÕES */}
           {activeSection === "divulgacoes" && (
             <div className="space-y-6">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -925,12 +1121,12 @@ export default function AdminPanel({ onLogout }: { onLogout: () => void }) {
             </div>
           )}
 
-          {/* CONFIGURAÇÕES & SEGURANÇA */}
+          {/* CONFIGURAÇÕES & SENHA */}
           {activeSection === "settings" && (
             <div className="space-y-6 max-w-2xl">
               <div>
                 <h1 className="text-2xl md:text-3xl font-extrabold mb-1">Configurações & Senha</h1>
-                <p className="text-sm text-[#969696]">Altere sua senha de acesso ao painel ou limpe todos os dados do sistema na zona de perigo.</p>
+                <p className="text-sm text-[#969696]">Altere sua senha de acesso ou limpe todos os dados na zona de perigo.</p>
               </div>
 
               <form onSubmit={handlePasswordChange} className="p-6 rounded-2xl bg-[#111111] border border-[#292929] space-y-4">
@@ -985,13 +1181,12 @@ export default function AdminPanel({ onLogout }: { onLogout: () => void }) {
                 </div>
               </form>
 
-              {/* Zona de Perigo */}
               <div className="p-6 rounded-2xl bg-[#ef4444]/10 border border-[#ef4444]/30 space-y-4">
                 <h2 className="text-lg font-bold flex items-center gap-2 text-[#f87171]">
                   <AlertTriangle className="w-5 h-5" /> Zona de Perigo
                 </h2>
                 <p className="text-sm text-[#ccc]">
-                  Limpar todos os dados do banco de dados apagará todas as divulgações, inscrições de recrutamento, equipe e métricas. Esta ação não pode ser desfeita.
+                  Limpar todos os dados apagará divulgações, inscrições, equipe, métricas e configurações. Esta ação não pode ser desfeita.
                 </p>
                 <button
                   type="button"
@@ -1013,7 +1208,7 @@ export default function AdminPanel({ onLogout }: { onLogout: () => void }) {
         </div>
       </div>
 
-      {/* Mobile Sidebar Drawer */}
+      {/* Mobile Drawer */}
       {mobileMenuOpen && (
         <div className="fixed inset-0 z-50 flex lg:hidden bg-black/80 backdrop-blur-sm">
           <div className="w-72 bg-[#0d0d0d] border-r border-[#1f1f1f] p-6 flex flex-col justify-between">
@@ -1042,6 +1237,12 @@ export default function AdminPanel({ onLogout }: { onLogout: () => void }) {
                   className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-sm transition ${activeSection === "equipeAdmin" ? "bg-[#8b5cf6] text-white" : "text-[#969696] hover:text-white"}`}
                 >
                   <ShieldAlert className="w-4 h-4" /> Donos e Admins ({equipe.length})
+                </button>
+                <button
+                  onClick={() => { setActiveSection("editColors"); setMobileMenuOpen(false); }}
+                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-sm transition ${activeSection === "editColors" ? "bg-[#8b5cf6] text-white" : "text-[#969696] hover:text-white"}`}
+                >
+                  <Palette className="w-4 h-4" /> Cores do Site
                 </button>
                 <button
                   onClick={() => { setActiveSection("editImages"); setMobileMenuOpen(false); }}
@@ -1095,7 +1296,7 @@ export default function AdminPanel({ onLogout }: { onLogout: () => void }) {
         </div>
       )}
 
-      {/* Modal Criar / Editar Divulgação */}
+      {/* Modal Divulgação */}
       {isModalOpen && editingItem && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto">
           <div className="bg-[#111111] border border-[#292929] w-full max-w-lg rounded-3xl p-6 md:p-8 space-y-6 shadow-2xl relative">
@@ -1162,7 +1363,7 @@ export default function AdminPanel({ onLogout }: { onLogout: () => void }) {
                 <textarea
                   value={editingItem.description}
                   onChange={(e) => setEditingItem({ ...editingItem, description: e.target.value })}
-                  placeholder="Breve descrição da divulgação..."
+                  placeholder="Breve descrição..."
                   className="w-full p-3 bg-[#0d0d0d] text-white border border-[#292929] rounded-xl outline-none focus:border-[#8b5cf6] text-sm min-h-[90px]"
                 />
               </div>
@@ -1189,12 +1390,12 @@ export default function AdminPanel({ onLogout }: { onLogout: () => void }) {
         </div>
       )}
 
-      {/* Modal Criar / Editar Membro da Equipe */}
+      {/* Modal Equipe */}
       {isEquipeModalOpen && editingEquipe && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto">
           <div className="bg-[#111111] border border-[#292929] w-full max-w-lg rounded-3xl p-6 md:p-8 space-y-6 shadow-2xl relative">
             <div className="flex items-center justify-between">
-              <h2 className="text-xl font-bold">{editingEquipe.id ? "Editar Membro da Equipe" : "Adicionar Membro da Equipe"}</h2>
+              <h2 className="text-xl font-bold">{editingEquipe.id ? "Editar Membro" : "Adicionar Membro"}</h2>
               <button onClick={() => setIsEquipeModalOpen(false)} className="p-2 rounded-full hover:bg-[#222] text-[#969696] hover:text-white">
                 <X className="w-5 h-5" />
               </button>
@@ -1202,7 +1403,7 @@ export default function AdminPanel({ onLogout }: { onLogout: () => void }) {
 
             <form onSubmit={handleSaveEquipe} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium mb-1.5">Nome do Membro *</label>
+                <label className="block text-sm font-medium mb-1.5">Nome *</label>
                 <input
                   type="text"
                   value={editingEquipe.nome}
@@ -1215,24 +1416,24 @@ export default function AdminPanel({ onLogout }: { onLogout: () => void }) {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium mb-1.5">Cargo / Função *</label>
+                  <label className="block text-sm font-medium mb-1.5">Cargo *</label>
                   <input
                     type="text"
                     value={editingEquipe.cargo}
                     onChange={(e) => setEditingEquipe({ ...editingEquipe, cargo: e.target.value })}
-                    placeholder="Ex: Dono ou Administrador"
+                    placeholder="Ex: Dono"
                     className="w-full p-3 bg-[#0d0d0d] text-white border border-[#292929] rounded-xl outline-none focus:border-[#8b5cf6] text-sm"
                     required
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium mb-1.5">Número de Contato / WhatsApp *</label>
+                  <label className="block text-sm font-medium mb-1.5">WhatsApp / Telegram *</label>
                   <input
                     type="text"
                     value={editingEquipe.numeroContato}
                     onChange={(e) => setEditingEquipe({ ...editingEquipe, numeroContato: e.target.value })}
-                    placeholder="Ex: 5511999999999 ou @usuario"
+                    placeholder="Ex: 5511999999999"
                     className="w-full p-3 bg-[#0d0d0d] text-white border border-[#292929] rounded-xl outline-none focus:border-[#8b5cf6] text-sm"
                     required
                   />
@@ -1240,7 +1441,7 @@ export default function AdminPanel({ onLogout }: { onLogout: () => void }) {
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-1.5">URL da Foto de Perfil</label>
+                <label className="block text-sm font-medium mb-1.5">URL da Foto</label>
                 <input
                   type="text"
                   value={editingEquipe.foto}

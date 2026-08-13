@@ -1,11 +1,10 @@
-import { eq, desc, sql, lt } from "drizzle-orm";
+import { eq, desc, lt, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, divulgacoes, appConfig, recrutamentoInscricoes, equipeContatos, siteVisitas, usuariosOnline, Divulgacao, InsertDivulgacao, RecrutamentoInscricao, InsertRecrutamentoInscricao, EquipeContato, InsertEquipeContato } from "../drizzle/schema";
+import { InsertUser, users, divulgacoes, Divulgacao, InsertDivulgacao, recrutamentoInscricoes, RecrutamentoInscricao, equipeContatos, EquipeContato, InsertEquipeContato, siteVisitas, usuariosOnline, appConfig } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
 
-// Lazily create the drizzle instance so local tooling can run without a DB.
 export async function getDb() {
   if (!_db && process.env.DATABASE_URL) {
     try {
@@ -129,52 +128,80 @@ export async function deleteDivulgacao(id: number): Promise<void> {
 // Recrutamento Database Helpers
 // ==========================================
 
-export async function createRecrutamentoInscricao(data: InsertRecrutamentoInscricao): Promise<number> {
+export async function getAllRecrutamento(): Promise<RecrutamentoInscricao[]> {
+  const db = await getDb();
+  if (!db) return [];
+  return await db.select().from(recrutamentoInscricoes).orderBy(desc(recrutamentoInscricoes.id));
+}
+
+export async function getAllRecrutamentoInscricoes(): Promise<RecrutamentoInscricao[]> {
+  return await getAllRecrutamento();
+}
+
+export async function createRecrutamento(data: typeof recrutamentoInscricoes.$inferInsert): Promise<number> {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   const res = await db.insert(recrutamentoInscricoes).values(data);
   return Number(res[0].insertId);
 }
 
-export async function getAllRecrutamentoInscricoes(): Promise<RecrutamentoInscricao[]> {
-  const db = await getDb();
-  if (!db) return [];
-  return await db.select().from(recrutamentoInscricoes).orderBy(desc(recrutamentoInscricoes.id));
+export async function createRecrutamentoInscricao(data: typeof recrutamentoInscricoes.$inferInsert): Promise<number> {
+  return await createRecrutamento(data);
 }
 
-export async function deleteRecrutamentoInscricao(id: number): Promise<void> {
+export async function deleteRecrutamento(id: number): Promise<void> {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   await db.delete(recrutamentoInscricoes).where(eq(recrutamentoInscricoes.id, id));
 }
 
+export async function deleteRecrutamentoInscricao(id: number): Promise<void> {
+  await deleteRecrutamento(id);
+}
+
 // ==========================================
-// Equipe / Contatos Database Helpers
+// Equipe Contatos Database Helpers
 // ==========================================
 
-export async function getAllEquipeContatos(): Promise<EquipeContato[]> {
+export async function getAllEquipe(): Promise<EquipeContato[]> {
   const db = await getDb();
   if (!db) return [];
   return await db.select().from(equipeContatos).orderBy(desc(equipeContatos.id));
 }
 
-export async function createEquipeContato(data: InsertEquipeContato): Promise<number> {
+export async function getAllEquipeContatos(): Promise<EquipeContato[]> {
+  return await getAllEquipe();
+}
+
+export async function createEquipe(data: InsertEquipeContato): Promise<number> {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   const res = await db.insert(equipeContatos).values(data);
   return Number(res[0].insertId);
 }
 
-export async function updateEquipeContato(id: number, data: Partial<InsertEquipeContato>): Promise<void> {
+export async function createEquipeContato(data: InsertEquipeContato): Promise<number> {
+  return await createEquipe(data);
+}
+
+export async function updateEquipe(id: number, data: Partial<InsertEquipeContato>): Promise<void> {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   await db.update(equipeContatos).set(data).where(eq(equipeContatos.id, id));
 }
 
-export async function deleteEquipeContato(id: number): Promise<void> {
+export async function updateEquipeContato(id: number, data: Partial<InsertEquipeContato>): Promise<void> {
+  await updateEquipe(id, data);
+}
+
+export async function deleteEquipe(id: number): Promise<void> {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   await db.delete(equipeContatos).where(eq(equipeContatos.id, id));
+}
+
+export async function deleteEquipeContato(id: number): Promise<void> {
+  await deleteEquipe(id);
 }
 
 // ==========================================
@@ -198,15 +225,11 @@ export async function heartbeatOnline(sessionId: string): Promise<void> {
   const db = await getDb();
   if (!db) return;
   
-  // Limpar sessões inativas com mais de 2 minutos (120 segundos)
   const twoMinutesAgo = new Date(Date.now() - 2 * 60 * 1000);
   try {
     await db.delete(usuariosOnline).where(lt(usuariosOnline.lastSeenAt, twoMinutesAgo));
-  } catch (e) {
-    // ignorar erro de limpeza
-  }
+  } catch (e) {}
 
-  // Upsert sessionId
   await db.insert(usuariosOnline)
     .values({ sessionId, lastSeenAt: new Date() })
     .onDuplicateKeyUpdate({ set: { lastSeenAt: new Date() } });
@@ -218,7 +241,6 @@ export async function getOnlineCount(): Promise<number> {
 
   const twoMinutesAgo = new Date(Date.now() - 2 * 60 * 1000);
   try {
-    // Remover inativos antes de contar
     await db.delete(usuariosOnline).where(lt(usuariosOnline.lastSeenAt, twoMinutesAgo));
     const res = await db.select({ count: sql<number>`count(*)` }).from(usuariosOnline);
     return Number(res[0]?.count || 1);
@@ -243,6 +265,23 @@ export async function setConfigValue(key: string, value: string): Promise<void> 
   await db.insert(appConfig).values({ key, value }).onDuplicateKeyUpdate({ set: { value } });
 }
 
+export async function updateSiteSettings(settings: Record<string, string>): Promise<void> {
+  for (const [key, value] of Object.entries(settings)) {
+    await setConfigValue(key, value);
+  }
+}
+
+export async function clearAllData(): Promise<void> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.delete(divulgacoes);
+  await db.delete(recrutamentoInscricoes);
+  await db.delete(equipeContatos);
+  await db.delete(siteVisitas);
+  await db.delete(usuariosOnline);
+  await db.delete(appConfig);
+}
+
 export async function getAllSiteSettings(): Promise<Record<string, string>> {
   const db = await getDb();
   const defaults = {
@@ -258,6 +297,16 @@ export async function getAllSiteSettings(): Promise<Record<string, string>> {
     site_bg_image: "",
     site_music_url: "",
     site_music_title: "Trilha Sonora Oficial",
+    // Color tokens
+    color_bg: "#050505",
+    color_card_bg: "#0d0d0d",
+    color_card_border: "#222222",
+    color_text_main: "#ffffff",
+    color_text_muted: "#969696",
+    color_primary: "#8b5cf6",
+    color_primary_hover: "#7c3aed",
+    color_accent: "#c4b5fd",
+    color_button_bg: "#171717",
   };
 
   if (!db) return defaults;
@@ -268,27 +317,7 @@ export async function getAllSiteSettings(): Promise<Record<string, string>> {
       settings[row.key] = row.value;
     }
     return settings;
-  } catch (err) {
+  } catch (error) {
     return defaults;
   }
-}
-
-export async function updateSiteSettings(settings: Record<string, string>): Promise<void> {
-  const db = await getDb();
-  if (!db) throw new Error("Database not available");
-  for (const [key, value] of Object.entries(settings)) {
-    if (value !== undefined) {
-      await db.insert(appConfig).values({ key, value: String(value) }).onDuplicateKeyUpdate({ set: { value: String(value) } });
-    }
-  }
-}
-
-export async function clearAllData(): Promise<void> {
-  const db = await getDb();
-  if (!db) throw new Error("Database not available");
-  await db.delete(divulgacoes);
-  await db.delete(recrutamentoInscricoes);
-  await db.delete(equipeContatos);
-  await db.delete(siteVisitas);
-  await db.delete(usuariosOnline);
 }

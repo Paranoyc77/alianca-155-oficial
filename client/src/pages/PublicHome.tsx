@@ -40,17 +40,14 @@ export default function PublicHome() {
   });
 
   useEffect(() => {
-    // Gerar sessionId único por aba/sessão
     let sessionId = sessionStorage.getItem("alianca_session_id");
     if (!sessionId) {
       sessionId = Math.random().toString(36).substring(2) + Date.now().toString(36);
       sessionStorage.setItem("alianca_session_id", sessionId);
     }
 
-    // Ping inicial de visita
     pingMutation.mutate({ sessionId });
 
-    // Heartbeat a cada 30 segundos
     const interval = setInterval(() => {
       heartbeatMutation.mutate({ sessionId });
     }, 30000);
@@ -93,7 +90,6 @@ export default function PublicHome() {
     };
   }, [divulgacoes, equipe]);
 
-  // Helper para extrair ID do YouTube e gerar link de embed ou iframe
   const getYouTubeEmbedUrl = (url: string) => {
     if (!url) return null;
     let videoId = "";
@@ -144,17 +140,24 @@ export default function PublicHome() {
     submitRecrutamentoMutation.mutate({ nome, contato, experiencia, motivacao });
   };
 
+  // Dynamic custom styles
+  const bgStyle = settings.site_bg_image
+    ? { backgroundImage: `linear-gradient(to bottom, rgba(5,5,5,0.9), rgba(5,5,5,0.95)), url(${settings.site_bg_image})`, backgroundSize: "cover", backgroundPosition: "center" }
+    : { backgroundColor: settings.color_bg || "#050505" };
+
   return (
     <div
-      className="min-h-screen text-white flex flex-col font-sans selection:bg-[#8b5cf6] selection:text-white relative bg-[#050505]"
-      style={settings.site_bg_image ? { backgroundImage: `linear-gradient(to bottom, rgba(5,5,5,0.9), rgba(5,5,5,0.95)), url(${settings.site_bg_image})`, backgroundSize: "cover", backgroundPosition: "center" } : {}}
+      className="min-h-screen flex flex-col font-sans relative"
+      style={{
+        ...bgStyle,
+        color: settings.color_text_main || "#ffffff",
+      }}
     >
-      {/* Hidden audio element for direct MP3 */}
+      {/* Hidden audio element */}
       {settings.site_music_url && !youtubeEmbed && (
         <audio ref={audioRef} src={settings.site_music_url} loop preload="none" />
       )}
 
-      {/* YouTube audio iframe hidden from view when playing */}
       {youtubeEmbed && isPlaying && (
         <div className="hidden">
           <iframe
@@ -167,49 +170,67 @@ export default function PublicHome() {
       )}
 
       {/* Navbar */}
-      <header className="border-b border-[#1f1f1f] bg-[#050505]/90 backdrop-blur sticky top-0 z-40 px-6 py-4 flex items-center justify-between">
+      <header
+        className="border-b backdrop-blur sticky top-0 z-40 px-6 py-4 flex items-center justify-between"
+        style={{
+          borderColor: settings.color_card_border || "#222222",
+          backgroundColor: `${settings.color_card_bg || "#0d0d0d"}ee`,
+        }}
+      >
         <div className="flex items-center gap-3">
           {settings.site_logo ? (
-            <img src={settings.site_logo} alt="Logo" className="w-10 h-10 rounded-xl object-cover border border-[#292929]" />
+            <img src={settings.site_logo} alt="Logo" className="w-10 h-10 rounded-xl object-cover border" style={{ borderColor: settings.color_card_border || "#292929" }} />
           ) : (
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#8b5cf6] to-[#5b21b6] flex items-center justify-center font-black text-white shadow-[0_0_20px_rgba(139,92,246,0.3)]">
+            <div
+              className="w-10 h-10 rounded-xl flex items-center justify-center font-black text-white shadow-lg"
+              style={{ background: `linear-gradient(to bottom right, ${settings.color_primary || "#8b5cf6"}, ${settings.color_primary_hover || "#7c3aed"})` }}
+            >
               155
             </div>
           )}
           <div>
             <span className="font-bold text-base block tracking-wide">{settings.site_title || "Aliança 155"}</span>
-            <span className="text-xs text-[#969696] block">{settings.site_subtitle || "Central de Divulgações"}</span>
+            <span className="text-xs block" style={{ color: settings.color_text_muted || "#969696" }}>{settings.site_subtitle || "Central de Divulgações"}</span>
           </div>
         </div>
 
         <div className="flex items-center gap-3">
-          {/* Metrics badges */}
-          <div className="hidden md:flex items-center gap-3 bg-[#111111] border border-[#222] px-3.5 py-1.5 rounded-xl text-xs">
-            <div className="flex items-center gap-1.5 text-[#969696]">
-              <Eye className="w-3.5 h-3.5 text-[#8b5cf6]" />
-              <span>Visitas: <strong className="text-white">{totalVisitas !== null ? totalVisitas : "..."}</strong></span>
+          <div className="hidden md:flex items-center gap-3 px-3.5 py-1.5 rounded-xl text-xs border" style={{ backgroundColor: settings.color_card_bg || "#111", borderColor: settings.color_card_border || "#222" }}>
+            <div className="flex items-center gap-1.5" style={{ color: settings.color_text_muted || "#969696" }}>
+              <Eye className="w-3.5 h-3.5" style={{ color: settings.color_primary || "#8b5cf6" }} />
+              <span>Visitas: <strong style={{ color: settings.color_text_main || "#fff" }}>{totalVisitas !== null ? totalVisitas : "..."}</strong></span>
             </div>
-            <div className="w-[1px] h-3.5 bg-[#333]"></div>
-            <div className="flex items-center gap-1.5 text-[#969696]">
+            <div className="w-[1px] h-3.5" style={{ backgroundColor: settings.color_card_border || "#333" }}></div>
+            <div className="flex items-center gap-1.5" style={{ color: settings.color_text_muted || "#969696" }}>
               <Activity className="w-3.5 h-3.5 text-[#22c55e] animate-pulse" />
-              <span>Online: <strong className="text-white">{usuariosOnline !== null ? usuariosOnline : "1"}</strong></span>
+              <span>Online: <strong style={{ color: settings.color_text_main || "#fff" }}>{usuariosOnline !== null ? usuariosOnline : "1"}</strong></span>
             </div>
           </div>
 
           {settings.site_music_url && (
             <button
               onClick={toggleMusic}
-              className="px-3.5 py-2 rounded-xl bg-[#141414] hover:bg-[#1f1f1f] border border-[#292929] text-xs font-bold transition flex items-center gap-2 text-[#bca9ff]"
+              className="px-3.5 py-2 rounded-xl border text-xs font-bold transition flex items-center gap-2"
+              style={{
+                backgroundColor: settings.color_button_bg || "#141414",
+                borderColor: settings.color_card_border || "#292929",
+                color: settings.color_accent || "#c4b5fd"
+              }}
               title={isPlaying ? "Pausar Trilha Sonora" : "Tocar Trilha Sonora"}
             >
-              {isPlaying ? <Pause className="w-3.5 h-3.5 text-[#8b5cf6] animate-pulse" /> : <Play className="w-3.5 h-3.5" />}
+              {isPlaying ? <Pause className="w-3.5 h-3.5 animate-pulse" style={{ color: settings.color_primary || "#8b5cf6" }} /> : <Play className="w-3.5 h-3.5" />}
               <span className="hidden sm:inline">{isPlaying ? "Pausar Música" : (settings.site_music_title || "Trilha Sonora")}</span>
             </button>
           )}
 
           <Link
             href="/admin"
-            className="px-4 py-2 rounded-xl bg-[#141414] hover:bg-[#1f1f1f] border border-[#292929] text-xs font-bold transition flex items-center gap-2 text-[#bca9ff]"
+            className="px-4 py-2 rounded-xl border text-xs font-bold transition flex items-center gap-2"
+            style={{
+              backgroundColor: settings.color_button_bg || "#141414",
+              borderColor: settings.color_card_border || "#292929",
+              color: settings.color_accent || "#c4b5fd"
+            }}
           >
             <Lock className="w-3.5 h-3.5" /> {settings.admin_btn_text || "Painel Admin"}
           </Link>
@@ -218,31 +239,38 @@ export default function PublicHome() {
 
       {/* Hero Section */}
       <section className="px-6 py-14 md:py-20 text-center max-w-4xl mx-auto space-y-6">
-        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#8b5cf6]/10 border border-[#8b5cf6]/30 text-[#bca9ff] text-xs font-bold tracking-wider">
+        <div
+          className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-bold tracking-wider border"
+          style={{
+            backgroundColor: `${settings.color_primary || "#8b5cf6"}15`,
+            borderColor: `${settings.color_primary || "#8b5cf6"}40`,
+            color: settings.color_accent || "#c4b5fd"
+          }}
+        >
           <Sparkles className="w-3.5 h-3.5" /> {settings.hero_badge || "ALIANÇA 155"}
         </div>
         
         <h1 className="text-4xl md:text-6xl font-black tracking-tight leading-tight">
           {settings.hero_title_main || "Central de Divulgações"}{" "}
-          <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#8b5cf6] to-[#c4b5fd]">
+          <span className="text-transparent bg-clip-text" style={{ backgroundImage: `linear-gradient(to right, ${settings.color_primary || "#8b5cf6"}, ${settings.color_accent || "#c4b5fd"})` }}>
             {settings.hero_title_accent || "Oficial"}
           </span>
         </h1>
 
-        <p className="text-[#969696] text-base md:text-lg max-w-2xl mx-auto leading-relaxed">
+        <p className="text-base md:text-lg max-w-2xl mx-auto leading-relaxed" style={{ color: settings.color_text_muted || "#969696" }}>
           {settings.hero_description || "Encontre os melhores grupos, canais e sites recomendados pela nossa comunidade."}
         </p>
 
         {/* Mobile Metrics view */}
-        <div className="flex md:hidden items-center justify-center gap-4 bg-[#111111] border border-[#222] px-4 py-2 rounded-xl text-xs max-w-xs mx-auto">
-          <div className="flex items-center gap-1.5 text-[#969696]">
-            <Eye className="w-3.5 h-3.5 text-[#8b5cf6]" />
-            <span>Visitas: <strong className="text-white">{totalVisitas !== null ? totalVisitas : "..."}</strong></span>
+        <div className="flex md:hidden items-center justify-center gap-4 px-4 py-2 rounded-xl text-xs max-w-xs mx-auto border" style={{ backgroundColor: settings.color_card_bg || "#111", borderColor: settings.color_card_border || "#222" }}>
+          <div className="flex items-center gap-1.5" style={{ color: settings.color_text_muted || "#969696" }}>
+            <Eye className="w-3.5 h-3.5" style={{ color: settings.color_primary || "#8b5cf6" }} />
+            <span>Visitas: <strong style={{ color: settings.color_text_main || "#fff" }}>{totalVisitas !== null ? totalVisitas : "..."}</strong></span>
           </div>
-          <div className="w-[1px] h-3.5 bg-[#333]"></div>
-          <div className="flex items-center gap-1.5 text-[#969696]">
+          <div className="w-[1px] h-3.5" style={{ backgroundColor: settings.color_card_border || "#333" }}></div>
+          <div className="flex items-center gap-1.5" style={{ color: settings.color_text_muted || "#969696" }}>
             <Activity className="w-3.5 h-3.5 text-[#22c55e] animate-pulse" />
-            <span>Online: <strong className="text-white">{usuariosOnline !== null ? usuariosOnline : "1"}</strong></span>
+            <span>Online: <strong style={{ color: settings.color_text_main || "#fff" }}>{usuariosOnline !== null ? usuariosOnline : "1"}</strong></span>
           </div>
         </div>
 
@@ -250,13 +278,18 @@ export default function PublicHome() {
         {activeTab !== "recrutamento" && activeTab !== "equipe" && (
           <div className="pt-4 max-w-2xl mx-auto flex flex-col sm:flex-row gap-3">
             <div className="relative flex-1">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#969696]" />
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: settings.color_text_muted || "#969696" }} />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Pesquisar por nome ou link..."
-                className="w-full pl-11 pr-4 py-3.5 bg-[#111111]/90 text-white border border-[#262626] rounded-2xl outline-none focus:border-[#8b5cf6] transition text-sm shadow-inner backdrop-blur"
+                className="w-full pl-11 pr-4 py-3.5 rounded-2xl outline-none transition text-sm shadow-inner backdrop-blur border"
+                style={{
+                  backgroundColor: settings.color_card_bg || "#111111",
+                  borderColor: settings.color_card_border || "#262626",
+                  color: settings.color_text_main || "#fff"
+                }}
               />
             </div>
           </div>
@@ -266,37 +299,97 @@ export default function PublicHome() {
         <div className="flex flex-wrap items-center justify-center gap-2 pt-4">
           <button
             onClick={() => setActiveTab("all")}
-            className={`px-4 py-2.5 rounded-xl font-bold text-xs md:text-sm transition flex items-center gap-2 ${activeTab === "all" ? "bg-[#8b5cf6] text-white shadow-[0_4px_20px_rgba(139,92,246,0.3)]" : "bg-[#111111]/80 hover:bg-[#1a1a1a] text-[#969696] border border-[#262626]"}`}
+            className="px-4 py-2.5 rounded-xl font-bold text-xs md:text-sm transition flex items-center gap-2 border"
+            style={activeTab === "all" ? {
+              backgroundColor: settings.color_primary || "#8b5cf6",
+              color: "#fff",
+              borderColor: settings.color_primary || "#8b5cf6",
+              boxShadow: `0 4px 20px ${settings.color_primary || "#8b5cf6"}50`
+            } : {
+              backgroundColor: settings.color_card_bg || "#111111",
+              color: settings.color_text_muted || "#969696",
+              borderColor: settings.color_card_border || "#262626"
+            }}
           >
             Todos ({counts.all})
           </button>
           <button
             onClick={() => setActiveTab("grupo")}
-            className={`px-4 py-2.5 rounded-xl font-bold text-xs md:text-sm transition flex items-center gap-2 ${activeTab === "grupo" ? "bg-[#8b5cf6] text-white shadow-[0_4px_20px_rgba(139,92,246,0.3)]" : "bg-[#111111]/80 hover:bg-[#1a1a1a] text-[#969696] border border-[#262626]"}`}
+            className="px-4 py-2.5 rounded-xl font-bold text-xs md:text-sm transition flex items-center gap-2 border"
+            style={activeTab === "grupo" ? {
+              backgroundColor: settings.color_primary || "#8b5cf6",
+              color: "#fff",
+              borderColor: settings.color_primary || "#8b5cf6",
+              boxShadow: `0 4px 20px ${settings.color_primary || "#8b5cf6"}50`
+            } : {
+              backgroundColor: settings.color_card_bg || "#111111",
+              color: settings.color_text_muted || "#969696",
+              borderColor: settings.color_card_border || "#262626"
+            }}
           >
             <Users className="w-4 h-4" /> Grupos ({counts.grupo})
           </button>
           <button
             onClick={() => setActiveTab("canal")}
-            className={`px-4 py-2.5 rounded-xl font-bold text-xs md:text-sm transition flex items-center gap-2 ${activeTab === "canal" ? "bg-[#8b5cf6] text-white shadow-[0_4px_20px_rgba(139,92,246,0.3)]" : "bg-[#111111]/80 hover:bg-[#1a1a1a] text-[#969696] border border-[#262626]"}`}
+            className="px-4 py-2.5 rounded-xl font-bold text-xs md:text-sm transition flex items-center gap-2 border"
+            style={activeTab === "canal" ? {
+              backgroundColor: settings.color_primary || "#8b5cf6",
+              color: "#fff",
+              borderColor: settings.color_primary || "#8b5cf6",
+              boxShadow: `0 4px 20px ${settings.color_primary || "#8b5cf6"}50`
+            } : {
+              backgroundColor: settings.color_card_bg || "#111111",
+              color: settings.color_text_muted || "#969696",
+              borderColor: settings.color_card_border || "#262626"
+            }}
           >
             <Megaphone className="w-4 h-4" /> Canais ({counts.canal})
           </button>
           <button
             onClick={() => setActiveTab("site")}
-            className={`px-4 py-2.5 rounded-xl font-bold text-xs md:text-sm transition flex items-center gap-2 ${activeTab === "site" ? "bg-[#8b5cf6] text-white shadow-[0_4px_20px_rgba(139,92,246,0.3)]" : "bg-[#111111]/80 hover:bg-[#1a1a1a] text-[#969696] border border-[#262626]"}`}
+            className="px-4 py-2.5 rounded-xl font-bold text-xs md:text-sm transition flex items-center gap-2 border"
+            style={activeTab === "site" ? {
+              backgroundColor: settings.color_primary || "#8b5cf6",
+              color: "#fff",
+              borderColor: settings.color_primary || "#8b5cf6",
+              boxShadow: `0 4px 20px ${settings.color_primary || "#8b5cf6"}50`
+            } : {
+              backgroundColor: settings.color_card_bg || "#111111",
+              color: settings.color_text_muted || "#969696",
+              borderColor: settings.color_card_border || "#262626"
+            }}
           >
             <Globe className="w-4 h-4" /> Sites ({counts.site})
           </button>
           <button
             onClick={() => setActiveTab("equipe")}
-            className={`px-4 py-2.5 rounded-xl font-bold text-xs md:text-sm transition flex items-center gap-2 ${activeTab === "equipe" ? "bg-gradient-to-br from-[#8b5cf6] to-[#5b21b6] text-white shadow-[0_4px_20px_rgba(139,92,246,0.4)]" : "bg-[#111111]/80 hover:bg-[#1a1a1a] text-[#bca9ff] border border-[#8b5cf6]/40"}`}
+            className="px-4 py-2.5 rounded-xl font-bold text-xs md:text-sm transition flex items-center gap-2 border"
+            style={activeTab === "equipe" ? {
+              background: `linear-gradient(to bottom right, ${settings.color_primary || "#8b5cf6"}, ${settings.color_primary_hover || "#7c3aed"})`,
+              color: "#fff",
+              borderColor: settings.color_primary || "#8b5cf6",
+              boxShadow: `0 4px 20px ${settings.color_primary || "#8b5cf6"}50`
+            } : {
+              backgroundColor: settings.color_card_bg || "#111111",
+              color: settings.color_accent || "#c4b5fd",
+              borderColor: `${settings.color_primary || "#8b5cf6"}40`
+            }}
           >
             <ShieldAlert className="w-4 h-4" /> Donos e Admins ({counts.equipe})
           </button>
           <button
             onClick={() => setActiveTab("recrutamento")}
-            className={`px-4 py-2.5 rounded-xl font-bold text-xs md:text-sm transition flex items-center gap-2 ${activeTab === "recrutamento" ? "bg-gradient-to-br from-[#8b5cf6] to-[#5b21b6] text-white shadow-[0_4px_20px_rgba(139,92,246,0.4)]" : "bg-[#111111]/80 hover:bg-[#1a1a1a] text-[#bca9ff] border border-[#8b5cf6]/40"}`}
+            className="px-4 py-2.5 rounded-xl font-bold text-xs md:text-sm transition flex items-center gap-2 border"
+            style={activeTab === "recrutamento" ? {
+              background: `linear-gradient(to bottom right, ${settings.color_primary || "#8b5cf6"}, ${settings.color_primary_hover || "#7c3aed"})`,
+              color: "#fff",
+              borderColor: settings.color_primary || "#8b5cf6",
+              boxShadow: `0 4px 20px ${settings.color_primary || "#8b5cf6"}50`
+            } : {
+              backgroundColor: settings.color_card_bg || "#111111",
+              color: settings.color_accent || "#c4b5fd",
+              borderColor: `${settings.color_primary || "#8b5cf6"}40`
+            }}
           >
             <UserPlus className="w-4 h-4" /> Recrutamento
           </button>
@@ -309,16 +402,16 @@ export default function PublicHome() {
           <div>
             <div className="text-center mb-10">
               <h2 className="text-2xl md:text-3xl font-black mb-2">Equipe de Donos e Administradores</h2>
-              <p className="text-sm text-[#969696]">Conecte-se diretamente com os responsáveis pela gestão da Aliança 155 via WhatsApp ou Telegram.</p>
+              <p className="text-sm" style={{ color: settings.color_text_muted || "#969696" }}>Conecte-se diretamente com os responsáveis pela gestão da Aliança 155 via WhatsApp ou Telegram.</p>
             </div>
 
             {equipeLoading ? (
-              <div className="flex justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-[#8b5cf6]" /></div>
+              <div className="flex justify-center py-20"><Loader2 className="w-8 h-8 animate-spin" style={{ color: settings.color_primary || "#8b5cf6" }} /></div>
             ) : equipe.length === 0 ? (
-              <div className="text-center py-20 bg-[#0d0d0d] border border-[#222] rounded-3xl p-8 max-w-lg mx-auto">
+              <div className="text-center py-20 border rounded-3xl p-8 max-w-lg mx-auto" style={{ backgroundColor: settings.color_card_bg || "#0d0d0d", borderColor: settings.color_card_border || "#222" }}>
                 <ShieldAlert className="w-12 h-12 mx-auto mb-3 text-[#555]" />
                 <h3 className="text-lg font-bold mb-1">Nenhum membro cadastrado</h3>
-                <p className="text-sm text-[#969696]">O administrador ainda não cadastrou os donos e admins no painel.</p>
+                <p className="text-sm" style={{ color: settings.color_text_muted || "#969696" }}>O administrador ainda não cadastrou os donos e admins no painel.</p>
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -329,20 +422,37 @@ export default function PublicHome() {
                   const telegramUrl = isUrl ? membro.numeroContato : `https://t.me/${membro.numeroContato.replace(/^@/, "")}`;
 
                   return (
-                    <div key={membro.id} className="bg-[#0d0d0d]/90 border border-[#222] hover:border-[#8b5cf6]/50 rounded-3xl p-6 transition duration-300 flex flex-col items-center text-center shadow-lg backdrop-blur">
+                    <div
+                      key={membro.id}
+                      className="border rounded-3xl p-6 transition duration-300 flex flex-col items-center text-center shadow-lg backdrop-blur"
+                      style={{
+                        backgroundColor: `${settings.color_card_bg || "#0d0d0d"}95`,
+                        borderColor: settings.color_card_border || "#222"
+                      }}
+                    >
                       {membro.foto ? (
-                        <img src={membro.foto} alt={membro.nome} className="w-24 h-24 rounded-full object-cover border-2 border-[#8b5cf6] shadow-[0_0_20px_rgba(139,92,246,0.3)] mb-4" />
+                        <img src={membro.foto} alt={membro.nome} className="w-24 h-24 rounded-full object-cover border-2 mb-4 shadow-md" style={{ borderColor: settings.color_primary || "#8b5cf6" }} />
                       ) : (
-                        <div className="w-24 h-24 rounded-full bg-gradient-to-br from-[#8b5cf6] to-[#5b21b6] flex items-center justify-center font-black text-2xl mb-4 shadow-[0_0_20px_rgba(139,92,246,0.3)]">
+                        <div
+                          className="w-24 h-24 rounded-full flex items-center justify-center font-black text-2xl mb-4 text-white shadow-md"
+                          style={{ background: `linear-gradient(to bottom right, ${settings.color_primary || "#8b5cf6"}, ${settings.color_primary_hover || "#7c3aed"})` }}
+                        >
                           {membro.nome.charAt(0)}
                         </div>
                       )}
-                      <span className="px-3 py-1 rounded-full bg-[#8b5cf6]/20 text-[#bca9ff] text-xs font-bold uppercase tracking-wider mb-2">
+                      <span
+                        className="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider mb-2 border"
+                        style={{
+                          backgroundColor: `${settings.color_primary || "#8b5cf6"}20`,
+                          borderColor: `${settings.color_primary || "#8b5cf6"}40`,
+                          color: settings.color_accent || "#c4b5fd"
+                        }}
+                      >
                         {membro.cargo}
                       </span>
-                      <h3 className="font-bold text-xl text-white mb-2">{membro.nome}</h3>
-                      <div className="mt-2 w-full pt-3 border-t border-[#222] flex items-center justify-center gap-2 text-sm text-[#969696]">
-                        <Phone className="w-4 h-4 text-[#8b5cf6]" />
+                      <h3 className="font-bold text-xl mb-2" style={{ color: settings.color_text_main || "#fff" }}>{membro.nome}</h3>
+                      <div className="mt-2 w-full pt-3 border-t flex items-center justify-center gap-2 text-sm" style={{ borderColor: settings.color_card_border || "#222", color: settings.color_text_muted || "#969696" }}>
+                        <Phone className="w-4 h-4" style={{ color: settings.color_primary || "#8b5cf6" }} />
                         <span>{membro.numeroContato}</span>
                       </div>
 
@@ -371,13 +481,22 @@ export default function PublicHome() {
             )}
           </div>
         ) : activeTab === "recrutamento" ? (
-          <div className="max-w-2xl mx-auto bg-[#0d0d0d]/95 border border-[#222] rounded-3xl p-8 shadow-[0_20px_60px_rgba(0,0,0,0.5)] backdrop-blur">
+          <div
+            className="max-w-2xl mx-auto border rounded-3xl p-8 shadow-2xl backdrop-blur"
+            style={{
+              backgroundColor: `${settings.color_card_bg || "#0d0d0d"}95`,
+              borderColor: settings.color_card_border || "#222"
+            }}
+          >
             <div className="text-center mb-8">
-              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#8b5cf6] to-[#5b21b6] flex items-center justify-center mx-auto mb-4 text-white shadow-[0_0_20px_rgba(139,92,246,0.3)]">
+              <div
+                className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4 text-white shadow-lg"
+                style={{ background: `linear-gradient(to bottom right, ${settings.color_primary || "#8b5cf6"}, ${settings.color_primary_hover || "#7c3aed"})` }}
+              >
                 <UserPlus className="w-7 h-7" />
               </div>
               <h2 className="text-2xl font-black mb-2">Recrutamento de Membros</h2>
-              <p className="text-sm text-[#969696]">Preencha o formulário abaixo para se candidatar a fazer parte da nossa comunidade.</p>
+              <p className="text-sm" style={{ color: settings.color_text_muted || "#969696" }}>Preencha o formulário abaixo para se candidatar a fazer parte da nossa comunidade.</p>
             </div>
 
             <form onSubmit={handleRecrutamentoSubmit} className="space-y-4">
@@ -388,7 +507,12 @@ export default function PublicHome() {
                   value={nome}
                   onChange={(e) => setNome(e.target.value)}
                   placeholder="Ex: Carlos 155"
-                  className="w-full p-3.5 bg-[#111] text-white border border-[#262626] rounded-xl outline-none focus:border-[#8b5cf6] text-sm"
+                  className="w-full p-3.5 border rounded-xl outline-none text-sm"
+                  style={{
+                    backgroundColor: settings.color_card_bg || "#111",
+                    borderColor: settings.color_card_border || "#262626",
+                    color: settings.color_text_main || "#fff"
+                  }}
                   required
                 />
               </div>
@@ -400,7 +524,12 @@ export default function PublicHome() {
                   value={contato}
                   onChange={(e) => setContato(e.target.value)}
                   placeholder="Ex: @seousuario ou (11) 99999-9999"
-                  className="w-full p-3.5 bg-[#111] text-white border border-[#262626] rounded-xl outline-none focus:border-[#8b5cf6] text-sm"
+                  className="w-full p-3.5 border rounded-xl outline-none text-sm"
+                  style={{
+                    backgroundColor: settings.color_card_bg || "#111",
+                    borderColor: settings.color_card_border || "#262626",
+                    color: settings.color_text_main || "#fff"
+                  }}
                   required
                 />
               </div>
@@ -411,7 +540,12 @@ export default function PublicHome() {
                   value={experiencia}
                   onChange={(e) => setExperiencia(e.target.value)}
                   placeholder="Conte um pouco sobre sua experiência em grupos, moderação ou projetos..."
-                  className="w-full p-3.5 bg-[#111] text-white border border-[#262626] rounded-xl outline-none focus:border-[#8b5cf6] text-sm min-h-[100px]"
+                  className="w-full p-3.5 border rounded-xl outline-none text-sm min-h-[100px]"
+                  style={{
+                    backgroundColor: settings.color_card_bg || "#111",
+                    borderColor: settings.color_card_border || "#262626",
+                    color: settings.color_text_main || "#fff"
+                  }}
                   required
                 />
               </div>
@@ -422,7 +556,12 @@ export default function PublicHome() {
                   value={motivacao}
                   onChange={(e) => setMotivacao(e.target.value)}
                   placeholder="Explique sua motivação..."
-                  className="w-full p-3.5 bg-[#111] text-white border border-[#262626] rounded-xl outline-none focus:border-[#8b5cf6] text-sm min-h-[100px]"
+                  className="w-full p-3.5 border rounded-xl outline-none text-sm min-h-[100px]"
+                  style={{
+                    backgroundColor: settings.color_card_bg || "#111",
+                    borderColor: settings.color_card_border || "#262626",
+                    color: settings.color_text_main || "#fff"
+                  }}
                   required
                 />
               </div>
@@ -430,7 +569,8 @@ export default function PublicHome() {
               <button
                 type="submit"
                 disabled={submitRecrutamentoMutation.isPending}
-                className="w-full py-4 rounded-xl bg-gradient-to-br from-[#8b5cf6] to-[#5b21b6] text-white font-bold text-sm transition hover:brightness-110 flex items-center justify-center gap-2 shadow-[0_8px_25px_rgba(139,92,246,0.3)]"
+                className="w-full py-4 rounded-xl text-white font-bold text-sm transition hover:brightness-110 flex items-center justify-center gap-2 shadow-lg"
+                style={{ background: `linear-gradient(to bottom right, ${settings.color_primary || "#8b5cf6"}, ${settings.color_primary_hover || "#7c3aed"})` }}
               >
                 {submitRecrutamentoMutation.isPending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-4 h-4" />} Enviar Inscrição
               </button>
@@ -438,43 +578,57 @@ export default function PublicHome() {
           </div>
         ) : listLoading ? (
           <div className="flex justify-center items-center py-24">
-            <Loader2 className="w-8 h-8 animate-spin text-[#8b5cf6]" />
+            <Loader2 className="w-8 h-8 animate-spin" style={{ color: settings.color_primary || "#8b5cf6" }} />
           </div>
         ) : filteredDivulgacoes.length === 0 ? (
-          <div className="text-center py-24 bg-[#0d0d0d] border border-[#222] rounded-3xl p-8 max-w-lg mx-auto">
-            <div className="w-16 h-16 rounded-2xl bg-[#171717] flex items-center justify-center mx-auto mb-4 text-[#969696]">
+          <div className="text-center py-24 border rounded-3xl p-8 max-w-lg mx-auto" style={{ backgroundColor: settings.color_card_bg || "#0d0d0d", borderColor: settings.color_card_border || "#222" }}>
+            <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4" style={{ backgroundColor: settings.color_button_bg || "#171717", color: settings.color_text_muted || "#969696" }}>
               <Search className="w-6 h-6" />
             </div>
             <h3 className="text-lg font-bold mb-1">Nenhuma divulgação encontrada</h3>
-            <p className="text-sm text-[#969696]">Tente buscar por outro termo ou selecione outra categoria.</p>
+            <p className="text-sm" style={{ color: settings.color_text_muted || "#969696" }}>Tente buscar por outro termo ou selecione outra categoria.</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredDivulgacoes.map((item) => (
               <div
                 key={item.id}
-                className="group bg-[#0d0d0d]/90 border border-[#222] hover:border-[#8b5cf6]/50 rounded-3xl p-6 transition duration-300 flex flex-col justify-between hover:shadow-[0_10px_30px_rgba(139,92,246,0.1)] relative overflow-hidden backdrop-blur"
+                className="group border rounded-3xl p-6 transition duration-300 flex flex-col justify-between relative overflow-hidden backdrop-blur shadow-md"
+                style={{
+                  backgroundColor: `${settings.color_card_bg || "#0d0d0d"}90`,
+                  borderColor: settings.color_card_border || "#222"
+                }}
               >
-                <div className="absolute top-0 right-0 w-32 h-32 bg-[#8b5cf6]/5 rounded-full blur-2xl group-hover:bg-[#8b5cf6]/10 transition"></div>
+                <div className="absolute top-0 right-0 w-32 h-32 rounded-full blur-2xl transition" style={{ backgroundColor: `${settings.color_primary || "#8b5cf6"}10` }}></div>
 
                 <div>
                   <div className="flex items-start gap-4 mb-4">
                     {item.image ? (
-                      <img src={item.image} alt={item.title} className="w-16 h-16 rounded-2xl object-cover shrink-0 border border-[#2a2a2a]" />
+                      <img src={item.image} alt={item.title} className="w-16 h-16 rounded-2xl object-cover shrink-0 border" style={{ borderColor: settings.color_card_border || "#2a2a2a" }} />
                     ) : (
-                      <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#8b5cf6] to-[#5b21b6] flex items-center justify-center font-black text-lg shrink-0 shadow-[0_0_15px_rgba(139,92,246,0.2)]">
+                      <div
+                        className="w-16 h-16 rounded-2xl flex items-center justify-center font-black text-lg shrink-0 text-white shadow-md"
+                        style={{ background: `linear-gradient(to bottom right, ${settings.color_primary || "#8b5cf6"}, ${settings.color_primary_hover || "#7c3aed"})` }}
+                      >
                         155
                       </div>
                     )}
                     <div className="flex-1 min-w-0">
-                      <span className="inline-block px-2.5 py-0.5 rounded-full bg-[#8b5cf6]/15 text-[#bca9ff] text-[10px] font-bold uppercase tracking-wider mb-1.5">
+                      <span
+                        className="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider mb-1.5 border"
+                        style={{
+                          backgroundColor: `${settings.color_primary || "#8b5cf6"}20`,
+                          borderColor: `${settings.color_primary || "#8b5cf6"}40`,
+                          color: settings.color_accent || "#c4b5fd"
+                        }}
+                      >
                         {item.type}
                       </span>
-                      <h3 className="font-bold text-lg text-white truncate">{item.title}</h3>
+                      <h3 className="font-bold text-lg truncate" style={{ color: settings.color_text_main || "#fff" }}>{item.title}</h3>
                     </div>
                   </div>
 
-                  <p className="text-[#969696] text-sm line-clamp-3 mb-6 leading-relaxed">
+                  <p className="text-sm line-clamp-3 mb-6 leading-relaxed" style={{ color: settings.color_text_muted || "#969696" }}>
                     {item.description || "Sem descrição informada para esta divulgação."}
                   </p>
                 </div>
@@ -483,7 +637,17 @@ export default function PublicHome() {
                   href={item.link.startsWith("http") ? item.link : `https://${item.link}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="w-full py-3 px-4 rounded-xl bg-[#171717] hover:bg-[#8b5cf6] text-white font-bold text-xs transition duration-200 flex items-center justify-center gap-2 group-hover:shadow-[0_4px_15px_rgba(139,92,246,0.3)]"
+                  className="w-full py-3 px-4 rounded-xl font-bold text-xs transition duration-200 flex items-center justify-center gap-2 shadow-md"
+                  style={{
+                    backgroundColor: settings.color_button_bg || "#171717",
+                    color: settings.color_text_main || "#fff",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = settings.color_primary || "#8b5cf6";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = settings.color_button_bg || "#171717";
+                  }}
                 >
                   Acessar Agora <ExternalLink className="w-3.5 h-3.5" />
                 </a>
@@ -494,7 +658,7 @@ export default function PublicHome() {
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-[#1f1f1f] py-8 text-center text-xs text-[#777] bg-[#050505]/95">
+      <footer className="border-t py-8 text-center text-xs backdrop-blur" style={{ borderColor: settings.color_card_border || "#1f1f1f", backgroundColor: `${settings.color_card_bg || "#050505"}95`, color: settings.color_text_muted || "#777" }}>
         <p>{settings.footer_text || "Aliança 155 — Todos os direitos reservados."}</p>
       </footer>
     </div>
