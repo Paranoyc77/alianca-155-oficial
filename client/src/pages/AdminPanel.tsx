@@ -62,6 +62,7 @@ export default function AdminPanel({ onLogout }: { onLogout: () => void }) {
     site_bg_image: "",
     site_music_url: "",
     site_music_title: "Trilha Sonora Oficial",
+    bot_rental_whatsapp: "5511999999999",
     // Color tokens
     color_bg: "#050505",
     color_card_bg: "#0d0d0d",
@@ -622,7 +623,7 @@ export default function AdminPanel({ onLogout }: { onLogout: () => void }) {
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
                   <h1 className="text-2xl md:text-3xl font-extrabold mb-1">Gerenciamento de Aluguel de Bot</h1>
-                  <p className="text-sm text-[#969696]">Configure os planos de aluguel e acompanhe os clientes que alugaram a bot.</p>
+                  <p className="text-sm text-[#969696]">Configure os planos de aluguel, o WhatsApp de atendimento e acompanhe os pedidos.</p>
                 </div>
                 <button
                   onClick={openBotPlanoCreateModal}
@@ -631,6 +632,30 @@ export default function AdminPanel({ onLogout }: { onLogout: () => void }) {
                   <Plus className="w-4 h-4" /> Criar Novo Plano
                 </button>
               </div>
+
+              {/* Configuração do WhatsApp de Aluguel */}
+              <form onSubmit={handleSaveSiteSettings} className="p-6 rounded-2xl bg-[#111111] border border-[#292929] space-y-4">
+                <h2 className="text-base font-bold text-white flex items-center gap-2">
+                  <Phone className="w-4 h-4 text-[#22c55e]" /> Número de WhatsApp para Solicitações de Aluguel
+                </h2>
+                <p className="text-xs text-[#969696]">Quando o cliente clicar em alugar um plano na página pública, ele será direcionado para este número de WhatsApp com a mensagem pronta.</p>
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <input
+                    type="text"
+                    value={siteForm.bot_rental_whatsapp}
+                    onChange={(e) => setSiteForm({ ...siteForm, bot_rental_whatsapp: e.target.value })}
+                    placeholder="Ex: 5511999999999 (apenas números com DDD e DDI)"
+                    className="flex-1 p-3 bg-[#0d0d0d] text-white border border-[#292929] rounded-xl outline-none focus:border-[#22c55e] text-sm"
+                  />
+                  <button
+                    type="submit"
+                    disabled={updateSettingsMutation.isPending}
+                    className="px-5 py-3 rounded-xl bg-[#22c55e] hover:bg-[#16a34a] text-white text-xs font-bold transition flex items-center justify-center gap-2 shrink-0"
+                  >
+                    {updateSettingsMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />} Salvar WhatsApp
+                  </button>
+                </div>
+              </form>
 
               {/* Planos Cadastrados */}
               <div className="space-y-4">
@@ -685,7 +710,7 @@ export default function AdminPanel({ onLogout }: { onLogout: () => void }) {
                   <div className="text-center py-16 bg-[#111111] border border-[#292929] rounded-2xl p-8">
                     <Bot className="w-10 h-10 mx-auto mb-3 text-[#555]" />
                     <h3 className="text-base font-bold mb-1">Nenhum aluguel realizado ainda</h3>
-                    <p className="text-xs text-[#969696]">Os clientes que alugarem a bot pelo site aparecerão listados aqui.</p>
+                    <p className="text-xs text-[#969696]">Os pedidos que chegarem pelo WhatsApp poderão ser registrados ou acompanhados aqui.</p>
                   </div>
                 ) : (
                   <div className="space-y-3">
