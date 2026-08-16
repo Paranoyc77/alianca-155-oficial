@@ -43,6 +43,13 @@
       "when": 1786848570654,
       "tag": "0005_safe_gargoyle",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "5",
+      "when": 1786849259408,
+      "tag": "0006_familiar_yellow_claw",
+      "breakpoints": true
     }
   ]
 }

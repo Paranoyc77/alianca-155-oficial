@@ -1,8 +1,10 @@
-# Aliança 155 - Sistema de Prioridades (Normal, VIP, Premium)
+# Aliança 155 - Aluguel Automático de Bot
 
-- [x] Fase 1: Definir regras de prioridade, ordenação e apresentação visual
-- [x] Fase 2: Adicionar prioridade ao schema MySQL e às funções de banco
-- [x] Fase 3: Atualizar APIs e validações para criar e editar prioridades
-- [x] Fase 4: Adicionar controles de prioridade no painel admin
-- [x] Fase 5: Exibir badges, destaque e ordenação VIP/Premium na página pública
-- [x] Fase 6: Testar CRUD, ordenação, filtros, responsividade e salvar checkpoint
+- [x] Fase 1: Definir o modelo de aluguel, planos, cobrança, ativação e integração da bot
+- [x] Fase 2: Escolher e configurar a infraestrutura de pagamento e a integração de provisionamento da bot
+- [x] Fase 3: Modelar o banco MySQL para planos, pedidos, aluguéis, pagamentos e configurações admin
+- [x] Fase 4: Implementar APIs seguras para catálogo, checkout, webhooks e ativação automática
+- [x] Fase 5: Construir a área pública de aluguel com planos, compra e acompanhamento do pedido
+- [x] Fase 6: Adicionar no painel admin a edição de planos, preços, duração, textos, limites e aluguéis
+- [x] Fase 7: Testar pagamentos, ativação, expiração, segurança, responsividade e preparar publicação
+- [x] Fase 8: Salvar checkpoint final e entregar o módulo de aluguel

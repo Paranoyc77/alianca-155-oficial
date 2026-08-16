@@ -1,11 +1,11 @@
 import { useState, useMemo, useRef, useEffect } from "react";
 import { trpc } from "@/lib/trpc";
-import { Search, ExternalLink, Users, Megaphone, Globe, Sparkles, Loader2, Lock, UserPlus, Music, Play, Pause, Send, ShieldAlert, Phone, MessageCircle, Eye, Activity, Crown, Star } from "lucide-react";
+import { Search, ExternalLink, Users, Megaphone, Globe, Sparkles, Loader2, Lock, UserPlus, Music, Play, Pause, Send, ShieldAlert, Phone, MessageCircle, Eye, Activity, Crown, Star, Bot, CheckCircle, Zap, CreditCard, Clock } from "lucide-react";
 import { Link } from "wouter";
 import { toast } from "sonner";
 
 export default function PublicHome() {
-  const [activeTab, setActiveTab] = useState<"all" | "grupo" | "canal" | "site" | "recrutamento" | "equipe">("all");
+  const [activeTab, setActiveTab] = useState<"all" | "grupo" | "canal" | "site" | "recrutamento" | "equipe" | "alugarBot">("all");
   const [searchQuery, setSearchQuery] = useState("");
 
   // Recrutamento form state
@@ -13,6 +13,14 @@ export default function PublicHome() {
   const [contato, setContato] = useState("");
   const [experiencia, setExperiencia] = useState("");
   const [motivacao, setMotivacao] = useState("");
+
+  // Aluguel Bot form state
+  const [selectedPlano, setSelectedPlano] = useState<any | null>(null);
+  const [compradorNome, setCompradorNome] = useState("");
+  const [compradorContato, setCompradorContato] = useState("");
+  const [botTokenOuUser, setBotTokenOuUser] = useState("");
+  const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
+  const [lastAluguelResult, setLastAluguelResult] = useState<any | null>(null);
 
   // Metrics state
   const [totalVisitas, setTotalVisitas] = useState<number | null>(null);
@@ -25,6 +33,7 @@ export default function PublicHome() {
   const { data: divulgacoes = [], isLoading: listLoading } = trpc.alianca.list.useQuery();
   const { data: settings = {} } = trpc.alianca.getSettings.useQuery();
   const { data: equipe = [], isLoading: equipeLoading } = trpc.alianca.listEquipe.useQuery();
+  const { data: planosBot = [], isLoading: planosLoading } = trpc.alianca.listBotPlanos.useQuery();
 
   const pingMutation = trpc.alianca.pingVisit.useMutation({
     onSuccess: (data) => {
@@ -69,6 +78,21 @@ export default function PublicHome() {
     }
   });
 
+  const alugarBotMutation = trpc.alianca.alugarBot.useMutation({
+    onSuccess: (res) => {
+      toast.success("Bot alugado e ativado com sucesso!");
+      setLastAluguelResult(res);
+      setIsSuccessModalOpen(true);
+      setCompradorNome("");
+      setCompradorContato("");
+      setBotTokenOuUser("");
+      setSelectedPlano(null);
+    },
+    onError: (err) => {
+      toast.error(err.message || "Erro ao processar aluguel do bot.");
+    }
+  });
+
   const filteredDivulgacoes = useMemo(() => {
     return divulgacoes.filter(item => {
       const matchesTab = activeTab === "all" || item.type === activeTab;
@@ -87,8 +111,9 @@ export default function PublicHome() {
       canal: divulgacoes.filter(x => x.type === "canal").length,
       site: divulgacoes.filter(x => x.type === "site").length,
       equipe: equipe.length,
+      planos: planosBot.length,
     };
-  }, [divulgacoes, equipe]);
+  }, [divulgacoes, equipe, planosBot]);
 
   const getYouTubeEmbedUrl = (url: string) => {
     if (!url) return null;
@@ -138,6 +163,20 @@ export default function PublicHome() {
       return;
     }
     submitRecrutamentoMutation.mutate({ nome, contato, experiencia, motivacao });
+  };
+
+  const handleAluguelSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedPlano || !compradorNome || !compradorContato || !botTokenOuUser) {
+      toast.error("Selecione um plano e preencha todos os campos.");
+      return;
+    }
+    alugarBotMutation.mutate({
+      planoId: selectedPlano.id,
+      compradorNome,
+      compradorContato,
+      botTokenOuUser,
+    });
   };
 
   // Dynamic custom styles
@@ -275,7 +314,7 @@ export default function PublicHome() {
         </div>
 
         {/* Search & Filter Bar */}
-        {activeTab !== "recrutamento" && activeTab !== "equipe" && (
+        {activeTab !== "recrutamento" && activeTab !== "equipe" && activeTab !== "alugarBot" && (
           <div className="pt-4 max-w-2xl mx-auto flex flex-col sm:flex-row gap-3">
             <div className="relative flex-1">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: settings.color_text_muted || "#969696" }} />
@@ -378,6 +417,22 @@ export default function PublicHome() {
             <ShieldAlert className="w-4 h-4" /> Donos e Admins ({counts.equipe})
           </button>
           <button
+            onClick={() => setActiveTab("alugarBot")}
+            className="px-4 py-2.5 rounded-xl font-bold text-xs md:text-sm transition flex items-center gap-2 border animate-pulse"
+            style={activeTab === "alugarBot" ? {
+              background: `linear-gradient(to bottom right, #22c55e, #15803d)`,
+              color: "#fff",
+              borderColor: "#22c55e",
+              boxShadow: `0 4px 20px rgba(34,197,94,0.5)`
+            } : {
+              backgroundColor: settings.color_card_bg || "#111111",
+              color: "#4ade80",
+              borderColor: "#22c55e40"
+            }}
+          >
+            <Bot className="w-4 h-4" /> Alugar Bot 🤖
+          </button>
+          <button
             onClick={() => setActiveTab("recrutamento")}
             className="px-4 py-2.5 rounded-xl font-bold text-xs md:text-sm transition flex items-center gap-2 border"
             style={activeTab === "recrutamento" ? {
@@ -398,7 +453,158 @@ export default function PublicHome() {
 
       {/* Main Content Area */}
       <main className="max-w-7xl mx-auto px-6 pb-24 flex-1 w-full">
-        {activeTab === "equipe" ? (
+        {activeTab === "alugarBot" ? (
+          <div className="space-y-10">
+            <div className="text-center max-w-2xl mx-auto space-y-3">
+              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-bold bg-[#22c55e]/20 text-[#4ade80] border border-[#22c55e]/30">
+                <Zap className="w-3.5 h-3.5" /> Ativação 100% Automática
+              </div>
+              <h2 className="text-3xl md:text-4xl font-black">Alugue a Bot Oficial para o seu Grupo</h2>
+              <p className="text-sm" style={{ color: settings.color_text_muted || "#969696" }}>
+                Moderação avançada, anti-flood, boas-vindas automáticas e comandos exclusivos ativos em segundos.
+              </p>
+            </div>
+
+            {planosLoading ? (
+              <div className="flex justify-center py-20"><Loader2 className="w-8 h-8 animate-spin" style={{ color: settings.color_primary || "#8b5cf6" }} /></div>
+            ) : planosBot.length === 0 ? (
+              <div className="text-center py-20 border rounded-3xl p-8 max-w-lg mx-auto" style={{ backgroundColor: settings.color_card_bg || "#0d0d0d", borderColor: settings.color_card_border || "#222" }}>
+                <Bot className="w-12 h-12 mx-auto mb-3 text-[#555]" />
+                <h3 className="text-lg font-bold mb-1">Nenhum plano disponível</h3>
+                <p className="text-sm" style={{ color: settings.color_text_muted || "#969696" }}>O administrador ainda não cadastrou os planos de aluguel de bot no painel.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
+                {planosBot.map((plano) => {
+                  const isSelected = selectedPlano?.id === plano.id;
+                  const recursosList = plano.recursos ? plano.recursos.split(",").map(r => r.trim()).filter(Boolean) : [];
+
+                  return (
+                    <div
+                      key={plano.id}
+                      className="border rounded-3xl p-6 transition duration-300 flex flex-col justify-between relative backdrop-blur shadow-lg"
+                      style={{
+                        backgroundColor: `${settings.color_card_bg || "#0d0d0d"}95`,
+                        borderColor: isSelected ? (settings.color_primary || "#8b5cf6") : (settings.color_card_border || "#222"),
+                        boxShadow: isSelected ? `0 0 25px ${settings.color_primary || "#8b5cf6"}40` : undefined
+                      }}
+                    >
+                      <div>
+                        <div className="flex items-center justify-between mb-4">
+                          <span className="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-[#22c55e]/20 text-[#4ade80] border border-[#22c55e]/30">
+                            {plano.duracaoDias} Dias
+                          </span>
+                          <span className="text-2xl font-black text-white">R$ {plano.preco}</span>
+                        </div>
+
+                        <h3 className="font-bold text-xl mb-2 text-white">{plano.nome}</h3>
+                        <p className="text-xs mb-6 leading-relaxed" style={{ color: settings.color_text_muted || "#969696" }}>
+                          {plano.descricao}
+                        </p>
+
+                        <div className="space-y-2 mb-8">
+                          {recursosList.map((rec, idx) => (
+                            <div key={idx} className="flex items-center gap-2 text-xs" style={{ color: settings.color_text_main || "#ddd" }}>
+                              <CheckCircle className="w-4 h-4 text-[#22c55e] shrink-0" />
+                              <span>{rec}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      <button
+                        onClick={() => setSelectedPlano(plano)}
+                        className="w-full py-3 px-4 rounded-xl font-bold text-xs transition duration-200 flex items-center justify-center gap-2 shadow-md"
+                        style={{
+                          background: isSelected ? "linear-gradient(to bottom right, #22c55e, #15803d)" : (settings.color_button_bg || "#171717"),
+                          color: isSelected ? "#fff" : (settings.color_text_main || "#fff"),
+                        }}
+                      >
+                        {isSelected ? "Plano Selecionado ✓" : "Selecionar Plano"}
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Checkout Form */}
+            {selectedPlano && (
+              <div
+                className="max-w-xl mx-auto border rounded-3xl p-8 shadow-2xl backdrop-blur space-y-6"
+                style={{
+                  backgroundColor: `${settings.color_card_bg || "#0d0d0d"}98`,
+                  borderColor: settings.color_primary || "#8b5cf6"
+                }}
+              >
+                <div className="flex items-center justify-between border-b border-[#222] pb-4">
+                  <div>
+                    <span className="text-xs text-[#8b5cf6] font-bold uppercase">Checkout Automático</span>
+                    <h3 className="text-xl font-bold text-white mt-0.5">{selectedPlano.nome}</h3>
+                  </div>
+                  <span className="text-2xl font-black text-[#4ade80]">R$ {selectedPlano.preco}</span>
+                </div>
+
+                <form onSubmit={handleAluguelSubmit} className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-1.5">Seu Nome *</label>
+                    <input
+                      type="text"
+                      value={compradorNome}
+                      onChange={(e) => setCompradorNome(e.target.value)}
+                      placeholder="Ex: Carlos 155"
+                      className="w-full p-3.5 border rounded-xl outline-none text-sm bg-[#111] border-[#262626] text-white"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium mb-1.5">Seu Contato (WhatsApp / Telegram) *</label>
+                    <input
+                      type="text"
+                      value={compradorContato}
+                      onChange={(e) => setCompradorContato(e.target.value)}
+                      placeholder="Ex: (11) 99999-9999"
+                      className="w-full p-3.5 border rounded-xl outline-none text-sm bg-[#111] border-[#262626] text-white"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium mb-1.5">Username da Bot ou Token (ex: @SuaBot_bot) *</label>
+                    <input
+                      type="text"
+                      value={botTokenOuUser}
+                      onChange={(e) => setBotTokenOuUser(e.target.value)}
+                      placeholder="Ex: @AliancaBot155_bot"
+                      className="w-full p-3.5 border rounded-xl outline-none text-sm bg-[#111] border-[#262626] text-white"
+                      required
+                    />
+                    <span className="text-[11px] text-[#969696] mt-1 block">A bot será provisionada e ativada automaticamente após a confirmação do pagamento.</span>
+                  </div>
+
+                  <div className="pt-3 flex gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedPlano(null)}
+                      className="px-5 py-3 rounded-xl bg-[#171717] text-xs font-bold text-[#bbb] hover:bg-[#222]"
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={alugarBotMutation.isPending}
+                      className="flex-1 py-3.5 px-6 rounded-xl font-bold text-sm text-white transition hover:brightness-110 flex items-center justify-center gap-2 shadow-lg"
+                      style={{ background: "linear-gradient(to bottom right, #22c55e, #15803d)" }}
+                    >
+                      {alugarBotMutation.isPending ? <Loader2 className="w-5 h-5 animate-spin" /> : <CreditCard className="w-4 h-4" />} Confirmar e Ativar Bot Agora
+                    </button>
+                  </div>
+                </form>
+              </div>
+            )}
+          </div>
+        ) : activeTab === "equipe" ? (
           <div>
             <div className="text-center mb-10">
               <h2 className="text-2xl md:text-3xl font-black mb-2">Equipe de Donos e Administradores</h2>
@@ -688,6 +894,47 @@ export default function PublicHome() {
           </div>
         )}
       </main>
+
+      {/* Success Modal for Bot Aluguel */}
+      {isSuccessModalOpen && lastAluguelResult && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4">
+          <div className="bg-[#111111] border border-[#22c55e]/40 w-full max-w-md rounded-3xl p-8 space-y-6 text-center shadow-2xl relative">
+            <div className="w-16 h-16 rounded-full bg-[#22c55e]/20 text-[#4ade80] flex items-center justify-center mx-auto border border-[#22c55e]/40 shadow-lg">
+              <CheckCircle className="w-8 h-8" />
+            </div>
+            
+            <div className="space-y-2">
+              <h3 className="text-2xl font-black text-white">Bot Alugada com Sucesso!</h3>
+              <p className="text-sm text-[#969696]">Seu pagamento foi aprovado e o sistema iniciou o provisionamento automático.</p>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-[#0d0d0d] border border-[#222] text-left space-y-2 text-xs">
+              <div className="flex justify-between">
+                <span className="text-[#969696]">Plano:</span>
+                <strong className="text-white">{lastAluguelResult.planoNome}</strong>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-[#969696]">Status do Bot:</span>
+                <strong className="text-[#4ade80]">ATIVO 🟢</strong>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-[#969696]">Expira em:</span>
+                <strong className="text-white">{new Date(lastAluguelResult.expiresAt).toLocaleDateString()}</strong>
+              </div>
+            </div>
+
+            <button
+              onClick={() => {
+                setIsSuccessModalOpen(false);
+                setActiveTab("all");
+              }}
+              className="w-full py-3.5 rounded-xl bg-[#22c55e] hover:bg-[#16a34a] text-white font-bold text-sm transition shadow-lg"
+            >
+              Concluir e Voltar ao Site
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Footer */}
       <footer className="border-t py-8 text-center text-xs backdrop-blur" style={{ borderColor: settings.color_card_border || "#1f1f1f", backgroundColor: `${settings.color_card_bg || "#050505"}95`, color: settings.color_text_muted || "#777" }}>

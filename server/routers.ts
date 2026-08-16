@@ -40,7 +40,6 @@ export const appRouter = router({
     // Listar todas as divulgações ordenadas por prioridade (premium, vip, normal) e ID
     list: publicProcedure.query(async () => {
       const items = await db.getAllDivulgacoes();
-      // Ordenar: premium primeiro, depois vip, depois normal
       const score = (p: string) => (p === "premium" ? 3 : p === "vip" ? 2 : 1);
       return items.sort((a, b) => {
         const pA = score(a.prioridade || "normal");
@@ -123,6 +122,108 @@ export const appRouter = router({
         return { success: true };
       }),
 
+    // Bot Aluguel & Planos Procedures
+    listBotPlanos: publicProcedure.query(async () => {
+      return await db.getAllBotPlanos();
+    }),
+
+    createBotPlano: adminProcedure
+      .input(z.object({
+        nome: z.string().min(1),
+        descricao: z.string().min(1),
+        preco: z.string().min(1),
+        duracaoDias: z.number().min(1),
+        recursos: z.string().min(1),
+        ativo: z.number().optional().default(1),
+      }))
+      .mutation(async ({ input }) => {
+        const id = await db.createBotPlano(input);
+        return { success: true, id };
+      }),
+
+    updateBotPlano: adminProcedure
+      .input(z.object({
+        id: z.number(),
+        nome: z.string().min(1),
+        descricao: z.string().min(1),
+        preco: z.string().min(1),
+        duracaoDias: z.number().min(1),
+        recursos: z.string().min(1),
+        ativo: z.number(),
+      }))
+      .mutation(async ({ input }) => {
+        await db.updateBotPlano(input.id, {
+          nome: input.nome,
+          descricao: input.descricao,
+          preco: input.preco,
+          duracaoDias: input.duracaoDias,
+          recursos: input.recursos,
+          ativo: input.ativo,
+        });
+        return { success: true };
+      }),
+
+    deleteBotPlano: adminProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        await db.deleteBotPlano(input.id);
+        return { success: true };
+      }),
+
+    listBotAlugueis: adminProcedure.query(async () => {
+      return await db.getAllBotAlugueis();
+    }),
+
+    alugarBot: publicProcedure
+      .input(z.object({
+        planoId: z.number(),
+        compradorNome: z.string().min(1),
+        compradorContato: z.string().min(1),
+        botTokenOuUser: z.string().min(1),
+      }))
+      .mutation(async ({ input }) => {
+        const planos = await db.getAllBotPlanos();
+        const plano = planos.find(p => p.id === input.planoId);
+        if (!plano) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Plano selecionado não foi encontrado." });
+        }
+
+        const expiresAt = new Date(Date.now() + plano.duracaoDias * 24 * 60 * 1000 * 60 * 60); // dias para ms
+        // Correção do cálculo de data:
+        const realExpiresAt = new Date(Date.now() + plano.duracaoDias * 86400000);
+
+        const id = await db.createBotAluguel({
+          planoId: plano.id,
+          planoNome: plano.nome,
+          compradorNome: input.compradorNome,
+          compradorContato: input.compradorContato,
+          botTokenOuUser: input.botTokenOuUser,
+          statusPagamento: "aprovado", // Simulação de aluguel automático direto
+          statusBot: "ativo",
+          expiresAt: realExpiresAt,
+        });
+
+        return { success: true, id, planoNome: plano.nome, expiresAt: realExpiresAt };
+      }),
+
+    updateBotAluguelStatus: adminProcedure
+      .input(z.object({
+        id: z.number(),
+        statusPagamento: z.string(),
+        statusBot: z.string(),
+      }))
+      .mutation(async ({ input }) => {
+        await db.updateBotAluguelStatus(input.id, input.statusPagamento, input.statusBot);
+        return { success: true };
+      }),
+
+    deleteBotAluguel: adminProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        await db.deleteBotAluguel(input.id);
+        return { success: true };
+      }),
+
     updateSettings: adminProcedure
       .input(z.record(z.string(), z.string()))
       .mutation(async ({ input }) => {
@@ -134,6 +235,7 @@ export const appRouter = router({
       const all = await db.getAllDivulgacoes();
       const inscricoes = await db.getAllRecrutamentoInscricoes();
       const equipe = await db.getAllEquipeContatos();
+      const alugueis = await db.getAllBotAlugueis();
       const totalVisitas = await db.getTotalVisitas();
       const usuariosOnline = await db.getOnlineCount();
 
@@ -143,8 +245,9 @@ export const appRouter = router({
       const sites = all.filter(x => x.type === "site").length;
       const totalInscricoes = inscricoes.length;
       const totalEquipe = equipe.length;
+      const totalAlugueis = alugueis.length;
 
-      return { total, grupos, canais, sites, totalInscricoes, totalEquipe, totalVisitas, usuariosOnline };
+      return { total, grupos, canais, sites, totalInscricoes, totalEquipe, totalAlugueis, totalVisitas, usuariosOnline };
     }),
 
     checkAdmin: publicProcedure.query(({ ctx }) => {

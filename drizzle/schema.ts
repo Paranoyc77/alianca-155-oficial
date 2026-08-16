@@ -1,4 +1,4 @@
-import { int, mysqlEnum, mysqlTable, text, timestamp, varchar } from "drizzle-orm/mysql-core";
+import { int, mysqlEnum, mysqlTable, text, timestamp, varchar, decimal } from "drizzle-orm/mysql-core";
 
 /**
  * Core user table backing auth flow.
@@ -56,9 +56,9 @@ export const recrutamentoInscricoes = mysqlTable("recrutamento_inscricoes", {
 export const equipeContatos = mysqlTable("equipe_contatos", {
   id: int("id").autoincrement().primaryKey(),
   nome: varchar("nome", { length: 255 }).notNull(),
-  cargo: varchar("cargo", { length: 100 }).notNull(), // 'Dono', 'Administrador', etc.
+  cargo: varchar("cargo", { length: 100 }).notNull(),
   foto: text("foto"),
-  numeroContato: varchar("numeroContato", { length: 100 }).notNull(), // Ex: +55 11 99999-9999 ou @usuario
+  numeroContato: varchar("numeroContato", { length: 100 }).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 
@@ -74,9 +74,38 @@ export const usuariosOnline = mysqlTable("usuarios_online", {
   lastSeenAt: timestamp("lastSeenAt").defaultNow().notNull(),
 });
 
+// Bot Rental Plans & Alugueis tables
+export const botPlanos = mysqlTable("bot_planos", {
+  id: int("id").autoincrement().primaryKey(),
+  nome: varchar("nome", { length: 100 }).notNull(), // Ex: Plano Mensal VIP
+  descricao: text("descricao").notNull(),
+  preco: varchar("preco", { length: 20 }).notNull(), // Ex: 29.90
+  duracaoDias: int("duracaoDias").notNull(), // Ex: 30
+  recursos: text("recursos").notNull(), // JSON ou texto separado por vírgula
+  ativo: int("ativo").default(1).notNull(), // 1 = ativo, 0 = desativado
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export const botAlugueis = mysqlTable("bot_alugueis", {
+  id: int("id").autoincrement().primaryKey(),
+  planoId: int("planoId").notNull(),
+  planoNome: varchar("planoNome", { length: 100 }).notNull(),
+  compradorNome: varchar("compradorNome", { length: 255 }).notNull(),
+  compradorContato: varchar("compradorContato", { length: 255 }).notNull(),
+  botTokenOuUser: varchar("botTokenOuUser", { length: 255 }).notNull(), // Username do bot ou token fornecido
+  statusPagamento: varchar("statusPagamento", { length: 50 }).default("pendente").notNull(), // pendente, aprovado, expirado
+  statusBot: varchar("statusBot", { length: 50 }).default("aguardando_ativacao").notNull(), // aguardando_ativacao, ativo, expirado
+  expiresAt: timestamp("expiresAt").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
 export type Divulgacao = typeof divulgacoes.$inferSelect;
 export type InsertDivulgacao = typeof divulgacoes.$inferInsert;
 export type AppConfig = typeof appConfig.$inferSelect;
 export type RecrutamentoInscricao = typeof recrutamentoInscricoes.$inferSelect;
 export type EquipeContato = typeof equipeContatos.$inferSelect;
 export type InsertEquipeContato = typeof equipeContatos.$inferInsert;
+export type BotPlano = typeof botPlanos.$inferSelect;
+export type InsertBotPlano = typeof botPlanos.$inferInsert;
+export type BotAluguel = typeof botAlugueis.$inferSelect;
+export type InsertBotAluguel = typeof botAlugueis.$inferInsert;

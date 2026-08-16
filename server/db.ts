@@ -1,10 +1,11 @@
 import { eq, desc, lt, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, divulgacoes, Divulgacao, InsertDivulgacao, recrutamentoInscricoes, RecrutamentoInscricao, equipeContatos, EquipeContato, InsertEquipeContato, siteVisitas, usuariosOnline, appConfig } from "../drizzle/schema";
+import { InsertUser, users, divulgacoes, Divulgacao, InsertDivulgacao, appConfig, AppConfig, recrutamentoInscricoes, RecrutamentoInscricao, equipeContatos, EquipeContato, InsertEquipeContato, siteVisitas, usuariosOnline, botPlanos, BotPlano, InsertBotPlano, botAlugueis, BotAluguel, InsertBotAluguel } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
 
+// Lazily create the drizzle instance so local tooling can run without a DB.
 export async function getDb() {
   if (!_db && process.env.DATABASE_URL) {
     try {
@@ -155,22 +156,18 @@ export async function deleteRecrutamento(id: number): Promise<void> {
   await db.delete(recrutamentoInscricoes).where(eq(recrutamentoInscricoes.id, id));
 }
 
-export async function deleteRecrutamentoInscricao(id: number): Promise<void> {
-  await deleteRecrutamento(id);
-}
-
 // ==========================================
 // Equipe Contatos Database Helpers
 // ==========================================
 
-export async function getAllEquipe(): Promise<EquipeContato[]> {
+export async function getAllEquipeContatos(): Promise<EquipeContato[]> {
   const db = await getDb();
   if (!db) return [];
   return await db.select().from(equipeContatos).orderBy(desc(equipeContatos.id));
 }
 
-export async function getAllEquipeContatos(): Promise<EquipeContato[]> {
-  return await getAllEquipe();
+export async function getAllEquipe(): Promise<EquipeContato[]> {
+  return await getAllEquipeContatos();
 }
 
 export async function createEquipe(data: InsertEquipeContato): Promise<number> {
@@ -202,6 +199,77 @@ export async function deleteEquipe(id: number): Promise<void> {
 
 export async function deleteEquipeContato(id: number): Promise<void> {
   await deleteEquipe(id);
+}
+
+// ==========================================
+// Bot Rental Database Helpers
+// ==========================================
+
+export async function getAllBotPlanos(): Promise<BotPlano[]> {
+  const db = await getDb();
+  if (!db) {
+    // Return default plans if DB is uninitialized
+    return [
+      { id: 1, nome: "Plano Teste (7 Dias)", descricao: "Ideal para testar todas as funções da bot em seu grupo.", preco: "10.00", duracaoDias: 7, recursos: "Moderação automática,Anti-flood,Boas-vindas personalizadas", ativo: 1, createdAt: new Date() },
+      { id: 2, nome: "Plano Mensal VIP", descricao: "Acesso completo por 30 dias com suporte prioritário e comandos avançados.", preco: "29.90", duracaoDias: 30, recursos: "Todos os recursos,Moderação avançada,Sistema de XP e Ranking,Suporte via WhatsApp", ativo: 1, createdAt: new Date() },
+      { id: 3, nome: "Plano Trimestral PRO", descricao: "Economize com o plano de 3 meses e tenha atualizações em primeira mão.", preco: "69.90", duracaoDias: 90, recursos: "Todos os recursos do VIP,Backup automático,Customização completa do prefixo", ativo: 1, createdAt: new Date() },
+    ];
+  }
+  const planos = await db.select().from(botPlanos).orderBy(botPlanos.preco);
+  if (planos.length === 0) {
+    // Seed default plans if empty
+    await db.insert(botPlanos).values([
+      { nome: "Plano Teste (7 Dias)", descricao: "Ideal para testar todas as funções da bot em seu grupo.", preco: "10.00", duracaoDias: 7, recursos: "Moderação automática,Anti-flood,Boas-vindas personalizadas", ativo: 1 },
+      { nome: "Plano Mensal VIP", descricao: "Acesso completo por 30 dias com suporte prioritário e comandos avançados.", preco: "29.90", duracaoDias: 30, recursos: "Todos os recursos,Moderação avançada,Sistema de XP e Ranking,Suporte via WhatsApp", ativo: 1 },
+      { nome: "Plano Trimestral PRO", descricao: "Economize com o plano de 3 meses e tenha atualizações em primeira mão.", preco: "69.90", duracaoDias: 90, recursos: "Todos os recursos do VIP,Backup automático,Customização completa do prefixo", ativo: 1 },
+    ]);
+    return await db.select().from(botPlanos);
+  }
+  return planos;
+}
+
+export async function createBotPlano(data: InsertBotPlano): Promise<number> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const res = await db.insert(botPlanos).values(data);
+  return Number(res[0].insertId);
+}
+
+export async function updateBotPlano(id: number, data: Partial<InsertBotPlano>): Promise<void> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.update(botPlanos).set(data).where(eq(botPlanos.id, id));
+}
+
+export async function deleteBotPlano(id: number): Promise<void> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.delete(botPlanos).where(eq(botPlanos.id, id));
+}
+
+export async function getAllBotAlugueis(): Promise<BotAluguel[]> {
+  const db = await getDb();
+  if (!db) return [];
+  return await db.select().from(botAlugueis).orderBy(desc(botAlugueis.id));
+}
+
+export async function createBotAluguel(data: InsertBotAluguel): Promise<number> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const res = await db.insert(botAlugueis).values(data);
+  return Number(res[0].insertId);
+}
+
+export async function updateBotAluguelStatus(id: number, statusPagamento: string, statusBot: string): Promise<void> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.update(botAlugueis).set({ statusPagamento, statusBot }).where(eq(botAlugueis.id, id));
+}
+
+export async function deleteBotAluguel(id: number): Promise<void> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.delete(botAlugueis).where(eq(botAlugueis.id, id));
 }
 
 // ==========================================
@@ -238,86 +306,56 @@ export async function heartbeatOnline(sessionId: string): Promise<void> {
 export async function getOnlineCount(): Promise<number> {
   const db = await getDb();
   if (!db) return 1;
-
   const twoMinutesAgo = new Date(Date.now() - 2 * 60 * 1000);
-  try {
-    await db.delete(usuariosOnline).where(lt(usuariosOnline.lastSeenAt, twoMinutesAgo));
-    const res = await db.select({ count: sql<number>`count(*)` }).from(usuariosOnline);
-    return Number(res[0]?.count || 1);
-  } catch (e) {
-    return 1;
-  }
+  const res = await db.select({ count: sql<number>`count(*)` }).from(usuariosOnline).where(sql`lastSeenAt >= ${twoMinutesAgo}`);
+  return Number(res[0]?.count || 1);
 }
+
+// ==========================================
+// Site Config Helpers
+// ==========================================
 
 export async function getConfigValue(key: string, defaultValue: string): Promise<string> {
   const db = await getDb();
   if (!db) return defaultValue;
   const res = await db.select().from(appConfig).where(eq(appConfig.key, key)).limit(1);
-  if (res.length > 0) {
-    return res[0].value;
-  }
-  return defaultValue;
+  return res.length > 0 ? res[0].value : defaultValue;
 }
 
 export async function setConfigValue(key: string, value: string): Promise<void> {
   const db = await getDb();
-  if (!db) throw new Error("Database not available");
+  if (!db) return;
   await db.insert(appConfig).values({ key, value }).onDuplicateKeyUpdate({ set: { value } });
 }
 
+export async function getAllSiteSettings(): Promise<Record<string, string>> {
+  const db = await getDb();
+  if (!db) return {};
+  const rows = await db.select().from(appConfig);
+  const settings: Record<string, string> = {};
+  rows.forEach(r => {
+    settings[r.key] = r.value;
+  });
+  return settings;
+}
+
 export async function updateSiteSettings(settings: Record<string, string>): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
   for (const [key, value] of Object.entries(settings)) {
-    await setConfigValue(key, value);
+    await db.insert(appConfig).values({ key, value }).onDuplicateKeyUpdate({ set: { value } });
   }
 }
 
 export async function clearAllData(): Promise<void> {
   const db = await getDb();
-  if (!db) throw new Error("Database not available");
+  if (!db) return;
   await db.delete(divulgacoes);
   await db.delete(recrutamentoInscricoes);
   await db.delete(equipeContatos);
   await db.delete(siteVisitas);
   await db.delete(usuariosOnline);
+  await db.delete(botPlanos);
+  await db.delete(botAlugueis);
   await db.delete(appConfig);
-}
-
-export async function getAllSiteSettings(): Promise<Record<string, string>> {
-  const db = await getDb();
-  const defaults = {
-    site_title: "Aliança 155",
-    site_subtitle: "Central de Divulgações",
-    hero_badge: "ALIANÇA 155",
-    hero_title_main: "Central de Divulgações",
-    hero_title_accent: "Oficial",
-    hero_description: "Encontre os melhores grupos, canais e sites recomendados pela nossa comunidade.",
-    footer_text: "Aliança 155 — Todos os direitos reservados.",
-    admin_btn_text: "Painel Admin",
-    site_logo: "",
-    site_bg_image: "",
-    site_music_url: "",
-    site_music_title: "Trilha Sonora Oficial",
-    // Color tokens
-    color_bg: "#050505",
-    color_card_bg: "#0d0d0d",
-    color_card_border: "#222222",
-    color_text_main: "#ffffff",
-    color_text_muted: "#969696",
-    color_primary: "#8b5cf6",
-    color_primary_hover: "#7c3aed",
-    color_accent: "#c4b5fd",
-    color_button_bg: "#171717",
-  };
-
-  if (!db) return defaults;
-  try {
-    const res = await db.select().from(appConfig);
-    const settings: Record<string, string> = { ...defaults };
-    for (const row of res) {
-      settings[row.key] = row.value;
-    }
-    return settings;
-  } catch (error) {
-    return defaults;
-  }
 }
