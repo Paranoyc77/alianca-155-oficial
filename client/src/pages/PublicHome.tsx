@@ -1,6 +1,6 @@
 import { useState, useMemo, useRef, useEffect } from "react";
 import { trpc } from "@/lib/trpc";
-import { Search, ExternalLink, Users, Megaphone, Globe, Sparkles, Loader2, Lock, UserPlus, Music, Play, Pause, Send, ShieldAlert, Phone, MessageCircle, Eye, Activity } from "lucide-react";
+import { Search, ExternalLink, Users, Megaphone, Globe, Sparkles, Loader2, Lock, UserPlus, Music, Play, Pause, Send, ShieldAlert, Phone, MessageCircle, Eye, Activity, Crown, Star } from "lucide-react";
 import { Link } from "wouter";
 import { toast } from "sonner";
 
@@ -590,69 +590,101 @@ export default function PublicHome() {
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredDivulgacoes.map((item) => (
-              <div
-                key={item.id}
-                className="group border rounded-3xl p-6 transition duration-300 flex flex-col justify-between relative overflow-hidden backdrop-blur shadow-md"
-                style={{
-                  backgroundColor: `${settings.color_card_bg || "#0d0d0d"}90`,
-                  borderColor: settings.color_card_border || "#222"
-                }}
-              >
-                <div className="absolute top-0 right-0 w-32 h-32 rounded-full blur-2xl transition" style={{ backgroundColor: `${settings.color_primary || "#8b5cf6"}10` }}></div>
+            {filteredDivulgacoes.map((item) => {
+              const p = item.prioridade || "normal";
+              const isPremium = p === "premium";
+              const isVip = p === "vip";
 
-                <div>
-                  <div className="flex items-start gap-4 mb-4">
-                    {item.image ? (
-                      <img src={item.image} alt={item.title} className="w-16 h-16 rounded-2xl object-cover shrink-0 border" style={{ borderColor: settings.color_card_border || "#2a2a2a" }} />
-                    ) : (
-                      <div
-                        className="w-16 h-16 rounded-2xl flex items-center justify-center font-black text-lg shrink-0 text-white shadow-md"
-                        style={{ background: `linear-gradient(to bottom right, ${settings.color_primary || "#8b5cf6"}, ${settings.color_primary_hover || "#7c3aed"})` }}
-                      >
-                        155
+              const cardStyle = isPremium
+                ? {
+                    backgroundColor: `${settings.color_card_bg || "#0d0d0d"}95`,
+                    borderColor: "#f59e0b88",
+                    boxShadow: "0 0 25px rgba(245, 158, 11, 0.2)"
+                  }
+                : isVip
+                ? {
+                    backgroundColor: `${settings.color_card_bg || "#0d0d0d"}95`,
+                    borderColor: `${settings.color_primary || "#8b5cf6"}88`,
+                    boxShadow: `0 0 20px ${settings.color_primary || "#8b5cf6"}25`
+                  }
+                : {
+                    backgroundColor: `${settings.color_card_bg || "#0d0d0d"}90`,
+                    borderColor: settings.color_card_border || "#222"
+                  };
+
+              return (
+                <div
+                  key={item.id}
+                  className="group border rounded-3xl p-6 transition duration-300 flex flex-col justify-between relative overflow-hidden backdrop-blur shadow-md"
+                  style={cardStyle}
+                >
+                  <div className="absolute top-0 right-0 w-32 h-32 rounded-full blur-2xl transition" style={{ backgroundColor: isPremium ? "rgba(245,158,11,0.15)" : `${settings.color_primary || "#8b5cf6"}10` }}></div>
+
+                  <div>
+                    <div className="flex items-start gap-4 mb-4">
+                      {item.image ? (
+                        <img src={item.image} alt={item.title} className="w-16 h-16 rounded-2xl object-cover shrink-0 border" style={{ borderColor: settings.color_card_border || "#2a2a2a" }} />
+                      ) : (
+                        <div
+                          className="w-16 h-16 rounded-2xl flex items-center justify-center font-black text-lg shrink-0 text-white shadow-md"
+                          style={{ background: isPremium ? "linear-gradient(to bottom right, #f59e0b, #d97706)" : `linear-gradient(to bottom right, ${settings.color_primary || "#8b5cf6"}, ${settings.color_primary_hover || "#7c3aed"})` }}
+                        >
+                          155
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5 mb-1.5">
+                          <span
+                            className="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border"
+                            style={{
+                              backgroundColor: `${settings.color_primary || "#8b5cf6"}20`,
+                              borderColor: `${settings.color_primary || "#8b5cf6"}40`,
+                              color: settings.color_accent || "#c4b5fd"
+                            }}
+                          >
+                            {item.type}
+                          </span>
+                          {isPremium && (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-amber-500/20 text-amber-300 border border-amber-500/40">
+                              <Star className="w-3 h-3 fill-amber-300" /> Premium
+                            </span>
+                          )}
+                          {isVip && (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-purple-500/20 text-purple-300 border border-purple-500/40">
+                              <Crown className="w-3 h-3" /> VIP
+                            </span>
+                          )}
+                        </div>
+                        <h3 className="font-bold text-lg truncate" style={{ color: settings.color_text_main || "#fff" }}>{item.title}</h3>
                       </div>
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <span
-                        className="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider mb-1.5 border"
-                        style={{
-                          backgroundColor: `${settings.color_primary || "#8b5cf6"}20`,
-                          borderColor: `${settings.color_primary || "#8b5cf6"}40`,
-                          color: settings.color_accent || "#c4b5fd"
-                        }}
-                      >
-                        {item.type}
-                      </span>
-                      <h3 className="font-bold text-lg truncate" style={{ color: settings.color_text_main || "#fff" }}>{item.title}</h3>
                     </div>
+
+                    <p className="text-sm line-clamp-3 mb-6 leading-relaxed" style={{ color: settings.color_text_muted || "#969696" }}>
+                      {item.description || "Sem descrição informada para esta divulgação."}
+                    </p>
                   </div>
 
-                  <p className="text-sm line-clamp-3 mb-6 leading-relaxed" style={{ color: settings.color_text_muted || "#969696" }}>
-                    {item.description || "Sem descrição informada para esta divulgação."}
-                  </p>
+                  <a
+                    href={item.link.startsWith("http") ? item.link : `https://${item.link}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full py-3 px-4 rounded-xl font-bold text-xs transition duration-200 flex items-center justify-center gap-2 shadow-md"
+                    style={{
+                      backgroundColor: isPremium ? "#f59e0b" : (settings.color_button_bg || "#171717"),
+                      color: isPremium ? "#000" : (settings.color_text_main || "#fff"),
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!isPremium) e.currentTarget.style.backgroundColor = settings.color_primary || "#8b5cf6";
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!isPremium) e.currentTarget.style.backgroundColor = settings.color_button_bg || "#171717";
+                    }}
+                  >
+                    Acessar Agora <ExternalLink className="w-3.5 h-3.5" />
+                  </a>
                 </div>
-
-                <a
-                  href={item.link.startsWith("http") ? item.link : `https://${item.link}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="w-full py-3 px-4 rounded-xl font-bold text-xs transition duration-200 flex items-center justify-center gap-2 shadow-md"
-                  style={{
-                    backgroundColor: settings.color_button_bg || "#171717",
-                    color: settings.color_text_main || "#fff",
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = settings.color_primary || "#8b5cf6";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = settings.color_button_bg || "#171717";
-                  }}
-                >
-                  Acessar Agora <ExternalLink className="w-3.5 h-3.5" />
-                </a>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </main>

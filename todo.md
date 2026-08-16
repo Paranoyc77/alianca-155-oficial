@@ -1,8 +1,8 @@
-# Aliança 155 - Editor Completo de Cores no Painel Admin
+# Aliança 155 - Sistema de Prioridades (Normal, VIP, Premium)
 
-- [x] Fase 1: Mapear os tokens visuais atuais e definir o catálogo completo de cores editáveis
-- [x] Fase 2: Atualizar defaults e campos de configuração no backend e banco de dados para os tokens de cores
-- [x] Fase 3: Integrar a aplicação dinâmica de cores (CSS variables) na página pública e painel admin
-- [x] Fase 4: Construir a aba de personalização de cores no painel admin com seletores de cor intuitivos e botão de reset
-- [x] Fase 5: Testar persistência, consistência e aplicação global
-- [x] Fase 6: Salvar checkpoint final e entregar o editor de cores
+- [x] Fase 1: Definir regras de prioridade, ordenação e apresentação visual
+- [x] Fase 2: Adicionar prioridade ao schema MySQL e às funções de banco
+- [x] Fase 3: Atualizar APIs e validações para criar e editar prioridades
+- [x] Fase 4: Adicionar controles de prioridade no painel admin
+- [x] Fase 5: Exibir badges, destaque e ordenação VIP/Premium na página pública
+- [x] Fase 6: Testar CRUD, ordenação, filtros, responsividade e salvar checkpoint

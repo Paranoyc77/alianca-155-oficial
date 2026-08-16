@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { trpc } from "@/lib/trpc";
-import { LayoutDashboard, Megaphone, Users, Globe, Settings, LogOut, Plus, Search, ExternalLink, Edit, Trash2, Key, AlertTriangle, X, Loader2, Menu, AlertCircle, FileText, CheckCircle2, Image as ImageIcon, Music, UserCheck, ShieldAlert, Phone, Eye, Activity, Palette, RotateCcw } from "lucide-react";
+import { LayoutDashboard, Megaphone, Users, Globe, Settings, LogOut, Plus, Search, ExternalLink, Edit, Trash2, Key, AlertTriangle, X, Loader2, Menu, AlertCircle, FileText, CheckCircle2, Image as ImageIcon, Music, UserCheck, ShieldAlert, Phone, Eye, Activity, Palette, RotateCcw, Award, Crown, Star } from "lucide-react";
 import { toast } from "sonner";
 
 export default function AdminPanel({ onLogout }: { onLogout: () => void }) {
@@ -18,6 +18,7 @@ export default function AdminPanel({ onLogout }: { onLogout: () => void }) {
     type: "grupo" | "canal" | "site";
     link: string;
     image: string;
+    prioridade: "normal" | "vip" | "premium";
   } | null>(null);
 
   // Equipe Modal state
@@ -181,6 +182,7 @@ export default function AdminPanel({ onLogout }: { onLogout: () => void }) {
       type: "grupo",
       link: "",
       image: "",
+      prioridade: "normal",
     });
     setIsModalOpen(true);
   };
@@ -193,6 +195,7 @@ export default function AdminPanel({ onLogout }: { onLogout: () => void }) {
       type: item.type,
       link: item.link,
       image: item.image || "",
+      prioridade: item.prioridade || "normal",
     });
     setIsModalOpen(true);
   };
@@ -234,6 +237,7 @@ export default function AdminPanel({ onLogout }: { onLogout: () => void }) {
         type: editingItem.type,
         link: editingItem.link,
         image: editingItem.image,
+        prioridade: editingItem.prioridade,
       });
     } else {
       createMutation.mutate({
@@ -242,6 +246,7 @@ export default function AdminPanel({ onLogout }: { onLogout: () => void }) {
         type: editingItem.type,
         link: editingItem.link,
         image: editingItem.image,
+        prioridade: editingItem.prioridade,
       });
     }
   };
@@ -1073,49 +1078,57 @@ export default function AdminPanel({ onLogout }: { onLogout: () => void }) {
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                  {filteredItems.map((item) => (
-                    <div key={item.id} className="p-5 rounded-2xl bg-[#111111] border border-[#292929] flex flex-col justify-between space-y-4">
-                      <div className="flex items-start gap-3">
-                        {item.image ? (
-                          <img src={item.image} alt={item.title} className="w-14 h-14 rounded-xl object-cover border border-[#333] shrink-0" />
-                        ) : (
-                          <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-[#8b5cf6] to-[#5b21b6] flex items-center justify-center font-bold text-sm shrink-0">
-                            155
+                  {filteredItems.map((item) => {
+                    const p = item.prioridade || "normal";
+                    const badgeBg = p === "premium" ? "bg-amber-500/20 text-amber-300 border-amber-500/40" : p === "vip" ? "bg-purple-500/20 text-purple-300 border-purple-500/40" : "bg-[#8b5cf6]/20 text-[#bca9ff] border-[#8b5cf6]/40";
+                    const badgeText = p === "premium" ? "⭐ Premium" : p === "vip" ? "👑 VIP" : item.type;
+
+                    return (
+                      <div key={item.id} className="p-5 rounded-2xl bg-[#111111] border border-[#292929] flex flex-col justify-between space-y-4">
+                        <div className="flex items-start gap-3">
+                          {item.image ? (
+                            <img src={item.image} alt={item.title} className="w-14 h-14 rounded-xl object-cover border border-[#333] shrink-0" />
+                          ) : (
+                            <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-[#8b5cf6] to-[#5b21b6] flex items-center justify-center font-bold text-sm shrink-0">
+                              155
+                            </div>
+                          )}
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className={`text-[10px] uppercase tracking-wider font-bold px-2 py-0.5 rounded-full border ${badgeBg}`}>
+                                {badgeText}
+                              </span>
+                            </div>
+                            <h3 className="font-bold text-base text-white truncate mt-1">{item.title}</h3>
+                            <p className="text-xs text-[#969696] truncate mt-0.5">{item.link}</p>
                           </div>
-                        )}
-                        <div className="min-w-0 flex-1">
-                          <span className="text-[10px] uppercase tracking-wider font-bold px-2 py-0.5 rounded-full bg-[#8b5cf6]/20 text-[#bca9ff]">
-                            {item.type}
-                          </span>
-                          <h3 className="font-bold text-base text-white truncate mt-1">{item.title}</h3>
-                          <p className="text-xs text-[#969696] truncate mt-0.5">{item.link}</p>
+                        </div>
+
+                        <p className="text-xs text-[#aaa] line-clamp-2">
+                          {item.description || "Sem descrição"}
+                        </p>
+
+                        <div className="flex items-center justify-end gap-2 pt-3 border-t border-[#222]">
+                          <button
+                            onClick={() => openEditModal(item)}
+                            className="px-3 py-1.5 rounded-lg bg-[#171717] hover:bg-[#222] text-xs font-bold text-[#bca9ff] flex items-center gap-1.5"
+                          >
+                            <Edit className="w-3.5 h-3.5" /> Editar
+                          </button>
+                          <button
+                            onClick={() => {
+                              if (window.confirm(`Deseja excluir "${item.title}"?`)) {
+                                deleteMutation.mutate({ id: item.id });
+                              }
+                            }}
+                            className="px-3 py-1.5 rounded-lg bg-[#ef4444]/20 hover:bg-[#ef4444]/30 text-xs font-bold text-[#f87171] flex items-center gap-1.5"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" /> Excluir
+                          </button>
                         </div>
                       </div>
-
-                      <p className="text-xs text-[#aaa] line-clamp-2">
-                        {item.description || "Sem descrição"}
-                      </p>
-
-                      <div className="flex items-center justify-end gap-2 pt-3 border-t border-[#222]">
-                        <button
-                          onClick={() => openEditModal(item)}
-                          className="px-3 py-1.5 rounded-lg bg-[#171717] hover:bg-[#222] text-xs font-bold text-[#bca9ff] flex items-center gap-1.5"
-                        >
-                          <Edit className="w-3.5 h-3.5" /> Editar
-                        </button>
-                        <button
-                          onClick={() => {
-                            if (window.confirm(`Deseja excluir "${item.title}"?`)) {
-                              deleteMutation.mutate({ id: item.id });
-                            }
-                          }}
-                          className="px-3 py-1.5 rounded-lg bg-[#ef4444]/20 hover:bg-[#ef4444]/30 text-xs font-bold text-[#f87171] flex items-center gap-1.5"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" /> Excluir
-                        </button>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -1335,16 +1348,29 @@ export default function AdminPanel({ onLogout }: { onLogout: () => void }) {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium mb-1.5">Link Externo *</label>
-                  <input
-                    type="text"
-                    value={editingItem.link}
-                    onChange={(e) => setEditingItem({ ...editingItem, link: e.target.value })}
-                    placeholder="https://t.me/seubot"
-                    className="w-full p-3 bg-[#0d0d0d] text-white border border-[#292929] rounded-xl outline-none focus:border-[#8b5cf6] text-sm"
-                    required
-                  />
+                  <label className="block text-sm font-medium mb-1.5">Prioridade *</label>
+                  <select
+                    value={editingItem.prioridade}
+                    onChange={(e) => setEditingItem({ ...editingItem, prioridade: e.target.value as any })}
+                    className="w-full p-3 bg-[#0d0d0d] text-white border border-[#292929] rounded-xl outline-none focus:border-[#8b5cf6] text-sm font-bold"
+                  >
+                    <option value="normal">Normal</option>
+                    <option value="vip">👑 VIP</option>
+                    <option value="premium">⭐ Premium</option>
+                  </select>
                 </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-1.5">Link Externo *</label>
+                <input
+                  type="text"
+                  value={editingItem.link}
+                  onChange={(e) => setEditingItem({ ...editingItem, link: e.target.value })}
+                  placeholder="https://t.me/seubot"
+                  className="w-full p-3 bg-[#0d0d0d] text-white border border-[#292929] rounded-xl outline-none focus:border-[#8b5cf6] text-sm"
+                  required
+                />
               </div>
 
               <div>

@@ -32,8 +32,8 @@ export const divulgacoes = mysqlTable("divulgacoes", {
   type: mysqlEnum("type", ["grupo", "canal", "site"]).notNull(),
   link: text("link").notNull(),
   image: text("image"),
+  prioridade: mysqlEnum("prioridade", ["normal", "vip", "premium"]).default("normal").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
 
 export const appConfig = mysqlTable("app_config", {
@@ -78,6 +78,5 @@ export type Divulgacao = typeof divulgacoes.$inferSelect;
 export type InsertDivulgacao = typeof divulgacoes.$inferInsert;
 export type AppConfig = typeof appConfig.$inferSelect;
 export type RecrutamentoInscricao = typeof recrutamentoInscricoes.$inferSelect;
-export type InsertRecrutamentoInscricao = typeof recrutamentoInscricoes.$inferInsert;
 export type EquipeContato = typeof equipeContatos.$inferSelect;
 export type InsertEquipeContato = typeof equipeContatos.$inferInsert;

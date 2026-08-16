@@ -7,28 +7,22 @@ import * as db from "./db";
 import { TRPCError } from "@trpc/server";
 import jwt from "jsonwebtoken";
 
-const ADMIN_COOKIE = "alianca155_admin_session";
-const JWT_SECRET_KEY = process.env.JWT_SECRET || "alianca155_secret_key";
+const ADMIN_COOKIE = "alianca_admin_session";
+const JWT_SECRET_KEY = process.env.JWT_SECRET || "alianca_secret_155_key";
 
 const adminProcedure = publicProcedure.use(({ ctx, next }) => {
-  const cookies = ctx.req.headers.cookie;
-  if (!cookies) {
-    throw new TRPCError({ code: "UNAUTHORIZED", message: "Acesso não autorizado. Faça login no painel." });
-  }
-
+  const cookies = ctx.req.headers.cookie || "";
   const match = cookies.split(";").map(c => c.trim()).find(c => c.startsWith(`${ADMIN_COOKIE}=`));
   if (!match) {
-    throw new TRPCError({ code: "UNAUTHORIZED", message: "Sessão administrativa ausente ou expirada." });
+    throw new TRPCError({ code: "UNAUTHORIZED", message: "Acesso não autorizado. Faça login no painel admin." });
   }
-
   const token = match.split("=")[1];
   try {
     jwt.verify(token, JWT_SECRET_KEY);
-  } catch (err) {
-    throw new TRPCError({ code: "UNAUTHORIZED", message: "Sessão inválida." });
+    return next({ ctx });
+  } catch (e) {
+    throw new TRPCError({ code: "UNAUTHORIZED", message: "Sessão expirada. Faça login novamente." });
   }
-
-  return next({ ctx });
 });
 
 export const appRouter = router({
@@ -43,52 +37,59 @@ export const appRouter = router({
   }),
 
   alianca: router({
-    // Listar todas as divulgações (público)
+    // Listar todas as divulgações ordenadas por prioridade (premium, vip, normal) e ID
     list: publicProcedure.query(async () => {
-      return await db.getAllDivulgacoes();
+      const items = await db.getAllDivulgacoes();
+      // Ordenar: premium primeiro, depois vip, depois normal
+      const score = (p: string) => (p === "premium" ? 3 : p === "vip" ? 2 : 1);
+      return items.sort((a, b) => {
+        const pA = score(a.prioridade || "normal");
+        const pB = score(b.prioridade || "normal");
+        if (pA !== pB) return pB - pA;
+        return b.id - a.id;
+      });
     }),
 
-    // Obter todas as configurações globais do site (público)
     getSettings: publicProcedure.query(async () => {
       return await db.getAllSiteSettings();
     }),
 
-    // Listar equipe (donos e admins) (público)
-    listEquipe: publicProcedure.query(async () => {
-      return await db.getAllEquipeContatos();
+    listRecrutamento: adminProcedure.query(async () => {
+      return await db.getAllRecrutamento();
     }),
 
-    // Registrar visita e heartbeat online (público)
-    pingVisit: publicProcedure
-      .input(z.object({ sessionId: z.string() }))
-      .mutation(async ({ input, ctx }) => {
-        const ip = ctx.req.headers["x-forwarded-for"] || ctx.req.socket?.remoteAddress || "unknown";
-        await db.recordVisit(String(ip));
-        await db.heartbeatOnline(input.sessionId);
-        const totalVisitas = await db.getTotalVisitas();
-        const usuariosOnline = await db.getOnlineCount();
-        return { success: true, totalVisitas, usuariosOnline };
-      }),
-
-    // Heartbeat online periódico (público)
-    heartbeat: publicProcedure
-      .input(z.object({ sessionId: z.string() }))
-      .mutation(async ({ input }) => {
-        await db.heartbeatOnline(input.sessionId);
-        const usuariosOnline = await db.getOnlineCount();
-        return { success: true, usuariosOnline };
-      }),
-
-    // Criar membro da equipe (admin)
-    createEquipe: adminProcedure
+    submitRecrutamento: publicProcedure
       .input(z.object({
-        nome: z.string().min(1, "Nome é obrigatório"),
-        cargo: z.string().min(1, "Cargo é obrigatório"),
-        foto: z.string().optional().default(""),
-        numeroContato: z.string().min(1, "Número de contato é obrigatório"),
+        nome: z.string().min(1),
+        contato: z.string().min(1),
+        experiencia: z.string().min(1),
+        motivacao: z.string().min(1),
       }))
       .mutation(async ({ input }) => {
-        const id = await db.createEquipeContato({
+        const id = await db.createRecrutamento(input);
+        return { success: true, id };
+      }),
+
+    deleteRecrutamento: adminProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        await db.deleteRecrutamento(input.id);
+        return { success: true };
+      }),
+
+    listEquipe: publicProcedure.query(async () => {
+      return await db.getAllEquipe();
+    }),
+
+    createEquipe: adminProcedure
+      .input(z.object({
+        nome: z.string().min(1),
+        cargo: z.string().min(1),
+        foto: z.string().optional().default(""),
+        numeroContato: z.string().min(1),
+      }))
+      .mutation(async ({ input }) => {
+        const id = await db.createEquipe({
           nome: input.nome,
           cargo: input.cargo,
           foto: input.foto || null,
@@ -97,7 +98,6 @@ export const appRouter = router({
         return { success: true, id };
       }),
 
-    // Atualizar membro da equipe (admin)
     updateEquipe: adminProcedure
       .input(z.object({
         id: z.number(),
@@ -107,7 +107,7 @@ export const appRouter = router({
         numeroContato: z.string().min(1),
       }))
       .mutation(async ({ input }) => {
-        await db.updateEquipeContato(input.id, {
+        await db.updateEquipe(input.id, {
           nome: input.nome,
           cargo: input.cargo,
           foto: input.foto || null,
@@ -116,47 +116,13 @@ export const appRouter = router({
         return { success: true };
       }),
 
-    // Excluir membro da equipe (admin)
     deleteEquipe: adminProcedure
       .input(z.object({ id: z.number() }))
       .mutation(async ({ input }) => {
-        await db.deleteEquipeContato(input.id);
+        await db.deleteEquipe(input.id);
         return { success: true };
       }),
 
-    // Enviar inscrição para recrutamento (público)
-    submitRecrutamento: publicProcedure
-      .input(z.object({
-        nome: z.string().min(2, "Nome é obrigatório"),
-        contato: z.string().min(3, "Contato é obrigatório"),
-        experiencia: z.string().min(5, "Informe sua experiência"),
-        motivacao: z.string().min(5, "Informe sua motivação"),
-      }))
-      .mutation(async ({ input }) => {
-        const id = await db.createRecrutamentoInscricao({
-          nome: input.nome,
-          contato: input.contato,
-          experiencia: input.experiencia,
-          motivacao: input.motivacao,
-          status: "pendente",
-        });
-        return { success: true, id };
-      }),
-
-    // Listar inscrições de recrutamento (requer admin)
-    listRecrutamento: adminProcedure.query(async () => {
-      return await db.getAllRecrutamentoInscricoes();
-    }),
-
-    // Excluir inscrição de recrutamento (requer admin)
-    deleteRecrutamento: adminProcedure
-      .input(z.object({ id: z.number() }))
-      .mutation(async ({ input }) => {
-        await db.deleteRecrutamentoInscricao(input.id);
-        return { success: true };
-      }),
-
-    // Atualizar configurações globais do site (requer admin)
     updateSettings: adminProcedure
       .input(z.record(z.string(), z.string()))
       .mutation(async ({ input }) => {
@@ -164,7 +130,6 @@ export const appRouter = router({
         return { success: true };
       }),
 
-    // Estatísticas para o dashboard admin (requer admin)
     stats: adminProcedure.query(async () => {
       const all = await db.getAllDivulgacoes();
       const inscricoes = await db.getAllRecrutamentoInscricoes();
@@ -182,7 +147,6 @@ export const appRouter = router({
       return { total, grupos, canais, sites, totalInscricoes, totalEquipe, totalVisitas, usuariosOnline };
     }),
 
-    // Verificar se sessão admin é válida
     checkAdmin: publicProcedure.query(({ ctx }) => {
       const cookies = ctx.req.headers.cookie || "";
       const match = cookies.split(";").map(c => c.trim()).find(c => c.startsWith(`${ADMIN_COOKIE}=`));
@@ -196,42 +160,60 @@ export const appRouter = router({
       }
     }),
 
-    // Login com senha simples definindo cookie HTTP-only
     login: publicProcedure
       .input(z.object({ password: z.string() }))
       .mutation(async ({ input, ctx }) => {
         const adminPass = await db.getConfigValue("admin_password", "155admin");
-        if (input.password === adminPass) {
-          const token = jwt.sign({ role: "admin" }, JWT_SECRET_KEY, { expiresIn: "7d" });
-          const isSecure = ctx.req.protocol === "https";
-          const cookieStr = `${ADMIN_COOKIE}=${token}; Path=/; HttpOnly; SameSite=${isSecure ? "none" : "lax"}; Max-Age=${7 * 24 * 3600}${isSecure ? "; Secure" : ""}`;
-          ctx.res.setHeader("Set-Cookie", cookieStr);
-          return { success: true };
+        if (input.password !== adminPass) {
+          throw new TRPCError({ code: "UNAUTHORIZED", message: "Senha incorreta." });
         }
-        throw new TRPCError({ code: "UNAUTHORIZED", message: "Senha incorreta." });
+        const token = jwt.sign({ role: "admin" }, JWT_SECRET_KEY, { expiresIn: "7d" });
+        const isSecure = ctx.req.protocol === "https" || ctx.req.headers["x-forwarded-proto"] === "https";
+        
+        ctx.res.setHeader("Set-Cookie", `${ADMIN_COOKIE}=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${7 * 24 * 3600}${isSecure ? "; Secure" : ""}`);
+        return { success: true };
       }),
 
-    // Logout do admin limpando cookie
-    adminLogout: publicProcedure.mutation(({ ctx }) => {
-      const isSecure = ctx.req.protocol === "https";
-      const cookieStr = `${ADMIN_COOKIE}=; Path=/; HttpOnly; SameSite=${isSecure ? "none" : "lax"}; Max-Age=0${isSecure ? "; Secure" : ""}`;
-      ctx.res.setHeader("Set-Cookie", cookieStr);
+    logout: publicProcedure.mutation(({ ctx }) => {
+      const isSecure = ctx.req.protocol === "https" || ctx.req.headers["x-forwarded-proto"] === "https";
+      ctx.res.setHeader("Set-Cookie", `${ADMIN_COOKIE}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0${isSecure ? "; Secure" : ""}`);
       return { success: true };
     }),
 
-    // Alterar senha do admin (requer admin)
     changePassword: adminProcedure
-      .input(z.object({ oldPassword: z.string(), newPassword: z.string() }))
+      .input(z.object({
+        oldPassword: z.string(),
+        newPassword: z.string().min(6),
+      }))
       .mutation(async ({ input }) => {
-        const adminPass = await db.getConfigValue("admin_password", "155admin");
-        if (input.oldPassword !== adminPass) {
-          throw new TRPCError({ code: "UNAUTHORIZED", message: "Senha atual incorreta." });
-        }
-        if (input.newPassword.length < 6) {
-          throw new TRPCError({ code: "BAD_REQUEST", message: "A nova senha precisa ter pelo menos 6 caracteres." });
+        const currentPass = await db.getConfigValue("admin_password", "155admin");
+        if (input.oldPassword !== currentPass) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Senha atual incorreta." });
         }
         await db.setConfigValue("admin_password", input.newPassword);
         return { success: true };
+      }),
+
+    pingVisit: publicProcedure
+      .input(z.object({ sessionId: z.string() }))
+      .mutation(async ({ input, ctx }) => {
+        const ip = (ctx.req.headers["x-forwarded-for"] as string) || ctx.req.socket?.remoteAddress || "";
+        const ipHash = ip ? Buffer.from(ip).toString("base64").substring(0, 32) : undefined;
+        
+        await db.recordVisit(ipHash);
+        await db.heartbeatOnline(input.sessionId);
+
+        const totalVisitas = await db.getTotalVisitas();
+        const usuariosOnline = await db.getOnlineCount();
+        return { totalVisitas, usuariosOnline };
+      }),
+
+    heartbeat: publicProcedure
+      .input(z.object({ sessionId: z.string() }))
+      .mutation(async ({ input }) => {
+        await db.heartbeatOnline(input.sessionId);
+        const usuariosOnline = await db.getOnlineCount();
+        return { usuariosOnline };
       }),
 
     // Criar divulgação (requer admin)
@@ -242,6 +224,7 @@ export const appRouter = router({
         type: z.enum(["grupo", "canal", "site"]),
         link: z.string().min(1, "Link é obrigatório"),
         image: z.string().optional().default(""),
+        prioridade: z.enum(["normal", "vip", "premium"]).optional().default("normal"),
       }))
       .mutation(async ({ input }) => {
         const id = await db.createDivulgacao({
@@ -250,6 +233,7 @@ export const appRouter = router({
           type: input.type,
           link: input.link,
           image: input.image || null,
+          prioridade: input.prioridade,
         });
         return { success: true, id };
       }),
@@ -263,6 +247,7 @@ export const appRouter = router({
         type: z.enum(["grupo", "canal", "site"]),
         link: z.string().min(1),
         image: z.string().optional().default(""),
+        prioridade: z.enum(["normal", "vip", "premium"]).optional().default("normal"),
       }))
       .mutation(async ({ input }) => {
         await db.updateDivulgacao(input.id, {
@@ -271,6 +256,7 @@ export const appRouter = router({
           type: input.type,
           link: input.link,
           image: input.image || null,
+          prioridade: input.prioridade,
         });
         return { success: true };
       }),
@@ -283,7 +269,6 @@ export const appRouter = router({
         return { success: true };
       }),
 
-    // Zona de perigo: limpar todos os dados (requer admin)
     clearAll: adminProcedure.mutation(async () => {
       await db.clearAllData();
       return { success: true };

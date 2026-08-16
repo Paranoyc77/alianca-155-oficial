@@ -36,6 +36,13 @@
       "when": 1786505593190,
       "tag": "0004_thankful_chat",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "5",
+      "when": 1786848570654,
+      "tag": "0005_safe_gargoyle",
+      "breakpoints": true
     }
   ]
 }

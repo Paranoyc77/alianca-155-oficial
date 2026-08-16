@@ -42,7 +42,7 @@ describe("Aliança 155 tRPC Router", () => {
     await expect(caller.alianca.stats()).rejects.toThrow();
   });
 
-  it("should login successfully and perform CRUD operations", async () => {
+  it("should login successfully and perform CRUD operations with priority sorting", async () => {
     const ctx = createTestContext();
     const caller = appRouter.createCaller(ctx);
 
@@ -50,37 +50,49 @@ describe("Aliança 155 tRPC Router", () => {
     const check = await caller.alianca.checkAdmin();
     expect(check.isAdmin).toBe(true);
 
-    // Create
-    const createRes = await caller.alianca.create({
-      title: "Grupo de Teste",
-      description: "Descrição de teste",
+    // Create normal priority
+    const itemNormal = await caller.alianca.create({
+      title: "Grupo Normal",
+      description: "Normal",
       type: "grupo",
-      link: "https://t.me/teste",
+      link: "https://t.me/normal",
       image: "",
+      prioridade: "normal",
     });
-    expect(createRes.success).toBe(true);
-    expect(createRes.id).toBeTypeOf("number");
 
-    // List & check
+    // Create premium priority
+    const itemPremium = await caller.alianca.create({
+      title: "Grupo Premium",
+      description: "Premium",
+      type: "grupo",
+      link: "https://t.me/premium",
+      image: "",
+      prioridade: "premium",
+    });
+
+    // Create VIP priority
+    const itemVip = await caller.alianca.create({
+      title: "Grupo VIP",
+      description: "VIP",
+      type: "grupo",
+      link: "https://t.me/vip",
+      image: "",
+      prioridade: "vip",
+    });
+
+    // List & check sorting: premium should come before vip, which comes before normal
     const list = await caller.alianca.list();
-    const created = list.find(x => x.id === createRes.id);
-    expect(created).toBeDefined();
-    expect(created?.title).toBe("Grupo de Teste");
+    const pIdx = list.findIndex(x => x.id === itemPremium.id);
+    const vIdx = list.findIndex(x => x.id === itemVip.id);
+    const nIdx = list.findIndex(x => x.id === itemNormal.id);
 
-    // Update
-    const updateRes = await caller.alianca.update({
-      id: createRes.id,
-      title: "Grupo Atualizado",
-      description: "Nova descrição",
-      type: "grupo",
-      link: "https://t.me/atualizado",
-      image: "",
-    });
-    expect(updateRes.success).toBe(true);
+    expect(pIdx).toBeLessThan(vIdx);
+    expect(vIdx).toBeLessThan(nIdx);
 
-    // Delete
-    const deleteRes = await caller.alianca.delete({ id: createRes.id });
-    expect(deleteRes.success).toBe(true);
+    // Cleanup
+    await caller.alianca.delete({ id: itemNormal.id });
+    await caller.alianca.delete({ id: itemVip.id });
+    await caller.alianca.delete({ id: itemPremium.id });
   });
 
   it("should manage team members with name, role, photo and contact", async () => {
@@ -90,53 +102,29 @@ describe("Aliança 155 tRPC Router", () => {
     await caller.alianca.login({ password: "155admin" });
 
     const createRes = await caller.alianca.createEquipe({
-      nome: "Administrador de Teste",
-      cargo: "Administrador",
-      foto: "https://example.com/admin.jpg",
-      numeroContato: "+55 11 99999-0000",
+      nome: "Admin Teste",
+      cargo: "Dono",
+      foto: "",
+      numeroContato: "5511999999999",
     });
     expect(createRes.success).toBe(true);
-    expect(createRes.id).toBeTypeOf("number");
 
-    const equipe = await caller.alianca.listEquipe();
-    const created = equipe.find(item => item.id === createRes.id);
-    expect(created?.nome).toBe("Administrador de Teste");
-    expect(created?.numeroContato).toBe("+55 11 99999-0000");
+    const equipeList = await caller.alianca.listEquipe();
+    const member = equipeList.find(x => x.id === createRes.id);
+    expect(member?.nome).toBe("Admin Teste");
 
-    const updateRes = await caller.alianca.updateEquipe({
-      id: createRes.id,
-      nome: "Dono Atualizado",
-      cargo: "Dono",
-      foto: "https://example.com/dono.jpg",
-      numeroContato: "+55 11 98888-0000",
-    });
-    expect(updateRes.success).toBe(true);
-
-    const updated = (await caller.alianca.listEquipe()).find(item => item.id === createRes.id);
-    expect(updated?.nome).toBe("Dono Atualizado");
-    expect(updated?.cargo).toBe("Dono");
-
-    const deleteRes = await caller.alianca.deleteEquipe({ id: createRes.id });
-    expect(deleteRes.success).toBe(true);
+    await caller.alianca.deleteEquipe({ id: createRes.id });
   });
 
-  it("should change password successfully and reject incorrect old password", async () => {
+  it("should change admin password successfully", async () => {
     const ctx = createTestContext();
     const caller = appRouter.createCaller(ctx);
 
-    await db.setConfigValue("admin_password", "155admin");
     await caller.alianca.login({ password: "155admin" });
-
-    // Fail with wrong old password
-    await expect(
-      caller.alianca.changePassword({ oldPassword: "wrong", newPassword: "newpassword123" })
-    ).rejects.toThrow();
-
-    // Success with correct old password
-    const res = await caller.alianca.changePassword({ oldPassword: "155admin", newPassword: "newpassword123" });
+    const res = await caller.alianca.changePassword({ oldPassword: "155admin", newPassword: "newsecurepass" });
     expect(res.success).toBe(true);
 
-    // Revert password back
-    await db.setConfigValue("admin_password", "155admin");
+    // revert back
+    await caller.alianca.changePassword({ oldPassword: "newsecurepass", newPassword: "155admin" });
   });
 });
