@@ -5,3 +5,5 @@
 - [x] Fase 3: Substituir o checkout automático pelo botão de solicitação via WhatsApp
 - [x] Fase 4: Validar mensagem, abertura do WhatsApp, responsividade e salvar checkpoint
 - [x] Permitir a alteração do número de contato do WhatsApp diretamente no painel administrativo
+- [x] Adicionar tela inicial com fundo roxo e botão "Entrar no site" antes de exibir a página principal
+- [x] Adicionar no painel administrativo campos para editar as frases e cores da tela inicial

@@ -63,6 +63,10 @@ export default function AdminPanel({ onLogout }: { onLogout: () => void }) {
     site_music_url: "",
     site_music_title: "Trilha Sonora Oficial",
     bot_rental_whatsapp: "5511999999999",
+    splash_title: "Bem-vindo à Aliança 155",
+    splash_subtitle: "Central Oficial de Divulgações e Comunidades",
+    splash_btn_text: "Entrar no Site",
+    splash_bg_color: "#3b0764",
     // Color tokens
     color_bg: "#050505",
     color_card_bg: "#0d0d0d",
@@ -1278,13 +1282,69 @@ export default function AdminPanel({ onLogout }: { onLogout: () => void }) {
                   </div>
                 </div>
 
+                <div className="pt-6 border-t border-[#222] space-y-4">
+                  <h3 className="text-base font-bold text-purple-400">Configuração da Tela Inicial (Splash Screen)</h3>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium mb-1.5">Título da Tela Inicial</label>
+                      <input
+                        type="text"
+                        value={siteForm.splash_title}
+                        onChange={(e) => setSiteForm({ ...siteForm, splash_title: e.target.value })}
+                        className="w-full p-3 bg-[#0d0d0d] text-white border border-[#292929] rounded-xl outline-none focus:border-[#8b5cf6] text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1.5">Texto do Botão de Entrada</label>
+                      <input
+                        type="text"
+                        value={siteForm.splash_btn_text}
+                        onChange={(e) => setSiteForm({ ...siteForm, splash_btn_text: e.target.value })}
+                        className="w-full p-3 bg-[#0d0d0d] text-white border border-[#292929] rounded-xl outline-none focus:border-[#8b5cf6] text-sm"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium mb-1.5">Subtítulo da Tela Inicial</label>
+                    <input
+                      type="text"
+                      value={siteForm.splash_subtitle}
+                      onChange={(e) => setSiteForm({ ...siteForm, splash_subtitle: e.target.value })}
+                      className="w-full p-3 bg-[#0d0d0d] text-white border border-[#292929] rounded-xl outline-none focus:border-[#8b5cf6] text-sm"
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between p-4 rounded-xl bg-[#0d0d0d] border border-[#222]">
+                    <div>
+                      <label className="block text-sm font-bold mb-0.5">Cor de Fundo da Tela Inicial (Roxo/Gradiente)</label>
+                      <span className="text-xs text-[#969696]">Escolha o tom predominante da tela inicial</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="color"
+                        value={siteForm.splash_bg_color}
+                        onChange={(e) => setSiteForm({ ...siteForm, splash_bg_color: e.target.value })}
+                        className="w-10 h-10 rounded-lg bg-transparent cursor-pointer border border-[#333]"
+                      />
+                      <input
+                        type="text"
+                        value={siteForm.splash_bg_color}
+                        onChange={(e) => setSiteForm({ ...siteForm, splash_bg_color: e.target.value })}
+                        className="w-24 p-2 bg-[#171717] text-white text-xs border border-[#333] rounded-lg text-center font-mono"
+                      />
+                    </div>
+                  </div>
+                </div>
+
                 <div className="pt-4 flex justify-end">
                   <button
                     type="submit"
                     disabled={updateSettingsMutation.isPending}
                     className="py-3 px-6 rounded-xl bg-gradient-to-br from-[#8b5cf6] to-[#5b21b6] text-white font-bold text-sm transition hover:brightness-110 flex items-center gap-2"
                   >
-                    {updateSettingsMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileText className="w-4 h-4" />} Salvar Textos
+                    {updateSettingsMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileText className="w-4 h-4" />} Salvar Textos e Tela Inicial
                   </button>
                 </div>
               </form>

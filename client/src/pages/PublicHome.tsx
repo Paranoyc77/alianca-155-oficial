@@ -5,6 +5,7 @@ import { Link } from "wouter";
 import { toast } from "sonner";
 
 export default function PublicHome() {
+  const [hasEntered, setHasEntered] = useState(false);
   const [activeTab, setActiveTab] = useState<"all" | "grupo" | "canal" | "site" | "recrutamento" | "equipe" | "alugarBot">("all");
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -158,7 +159,58 @@ export default function PublicHome() {
     window.open(url, "_blank");
   };
 
-  // Dynamic custom styles
+  // Splash Screen before entering site
+  if (!hasEntered) {
+    const splashBg = settings.splash_bg_color || "#3b0764"; // Roxo escuro elegante por padrão
+    const splashTitle = settings.splash_title || "Bem-vindo à Aliança 155";
+    const splashSubtitle = settings.splash_subtitle || "Central Oficial de Divulgações e Comunidades";
+    const splashBtnText = settings.splash_btn_text || "Entrar no Site";
+
+    return (
+      <div
+        className="min-h-screen flex flex-col items-center justify-center p-6 text-white text-center font-sans relative overflow-hidden"
+        style={{
+          background: `linear-gradient(135deg, ${splashBg} 0%, #1e1b4b 50%, #09090b 100%)`,
+        }}
+      >
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(139,92,246,0.15)_0,transparent_100%)] pointer-events-none"></div>
+
+        <div className="max-w-xl mx-auto space-y-8 z-10 animate-fade-in">
+          <div className="w-24 h-24 rounded-3xl bg-gradient-to-tr from-[#8b5cf6] to-[#c4b5fd] flex items-center justify-center font-black text-4xl text-black shadow-[0_0_50px_rgba(139,92,246,0.5)] mx-auto border-2 border-white/20">
+            155
+          </div>
+
+          <div className="space-y-3">
+            <h1 className="text-3xl md:text-5xl font-black tracking-tight">{splashTitle}</h1>
+            <p className="text-sm md:text-base text-purple-200/80 max-w-md mx-auto">{splashSubtitle}</p>
+          </div>
+
+          <button
+            onClick={() => {
+              setHasEntered(true);
+              if (settings.site_music_url) {
+                setIsPlaying(true);
+                setTimeout(() => {
+                  if (audioRef.current) {
+                    audioRef.current.play().catch(() => {});
+                  }
+                }, 100);
+              }
+            }}
+            className="py-4 px-10 rounded-2xl font-black text-base text-white transition duration-300 transform hover:scale-105 active:scale-95 shadow-[0_10px_30px_rgba(139,92,246,0.5)] flex items-center justify-center gap-3 mx-auto bg-gradient-to-r from-[#8b5cf6] to-[#7c3aed] border border-white/20 hover:brightness-110"
+          >
+            <Sparkles className="w-5 h-5 animate-pulse" /> {splashBtnText}
+          </button>
+        </div>
+
+        <footer className="absolute bottom-6 text-xs text-purple-300/50">
+          Aliança 155 — Central de Divulgações
+        </footer>
+      </div>
+    );
+  }
+
+  // Dynamic custom styles for main site
   const bgStyle = settings.site_bg_image
     ? { backgroundImage: `linear-gradient(to bottom, rgba(5,5,5,0.9), rgba(5,5,5,0.95)), url(${settings.site_bg_image})`, backgroundSize: "cover", backgroundPosition: "center" }
     : { backgroundColor: settings.color_bg || "#050505" };
