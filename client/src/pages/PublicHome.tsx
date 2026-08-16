@@ -549,11 +549,7 @@ export default function PublicHome() {
                     </div>
 
                     <button
-                      onClick={() => {
-                        const whatsappNum = settings.bot_rental_whatsapp || "5511999999999";
-                        const mensagem = encodeURIComponent(`Olá! Gostaria de solicitar a locação do plano "${plano.nome}" (R$ ${plano.preco}) da Aliança 155.`);
-                        window.open(`https://wa.me/${whatsappNum}?text=${mensagem}`, "_blank");
-                      }}
+                      onClick={() => handleWhatsAppSolicitacao(plano.nome, plano.preco)}
                       className="w-full py-3.5 px-4 rounded-xl font-bold text-xs transition duration-200 flex items-center justify-center gap-2 shadow-lg hover:brightness-110"
                       style={{
                         background: "linear-gradient(to bottom right, #22c55e, #15803d)",
