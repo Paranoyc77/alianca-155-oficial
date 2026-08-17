@@ -9,3 +9,4 @@
 - [x] Adicionar no painel administrativo campos para editar as frases e cores da tela inicial
 - [x] Configurar build para GitHub Pages (base path, rotas estáticas com hash/memory router ou 404.html)
 - [x] Criar GitHub Action workflow para publicação automática no GitHub Pages
+- [ ] Verificar remotes do Git e atualizar código no repositório GitHub
