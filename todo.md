@@ -7,3 +7,5 @@
 - [x] Permitir a alteração do número de contato do WhatsApp diretamente no painel administrativo
 - [x] Adicionar tela inicial com fundo roxo e botão "Entrar no site" antes de exibir a página principal
 - [x] Adicionar no painel administrativo campos para editar as frases e cores da tela inicial
+- [x] Configurar build para GitHub Pages (base path, rotas estáticas com hash/memory router ou 404.html)
+- [x] Criar GitHub Action workflow para publicação automática no GitHub Pages
